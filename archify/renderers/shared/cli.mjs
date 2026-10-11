@@ -367,15 +367,16 @@ export function svgRootAttrs(meta, explicitQualityProfile) {
   const requestedProfile = explicitQualityProfile || process.env.ARCHIFY_QUALITY_PROFILE || meta.quality_profile;
   const qualityProfile = requestedProfile === 'showcase' ? 'showcase' : 'standard';
   const advisory = requestedProfile ? '' : ' data-quality-gates="advisory"';
-  return `role="img" lang="${esc(resolveLocale(meta.locale))}" aria-labelledby="archify-diagram-title archify-diagram-description"${animation}${preset}${engineeringProfile} data-quality-profile="${esc(qualityProfile)}"${advisory}`;
+  // the name is an attribute, not a <title>, so hovering the diagram raises no native tooltip
+  return `role="img" lang="${esc(resolveLocale(meta.locale))}" aria-label="${esc(meta.title)}" aria-describedby="archify-diagram-description"${animation}${preset}${engineeringProfile} data-quality-profile="${esc(qualityProfile)}"${advisory}`;
 }
 
-// Keep the accessible name inside the SVG so it survives standalone SVG
-// export and embedding. The fixed IDs are deterministic because an Archify
+// Keep the accessible description inside the SVG so it survives standalone SVG
+// export and embedding. The fixed ID is deterministic because an Archify
 // artifact intentionally contains one primary diagram SVG.
 export function svgAccessibleText(meta, kind) {
   const description = meta.subtitle || translateMessage(meta.locale, `diagram.description.${kind}`);
-  return `        <title id="archify-diagram-title">${esc(meta.title)}</title>\n        <desc id="archify-diagram-description">${esc(description)}</desc>`;
+  return `        <desc id="archify-diagram-description">${esc(description)}</desc>`;
 }
 
 export function animateAttr(meta, kind, step) {
@@ -409,14 +410,6 @@ export function focusNodeAttrs(id, label, metadata = {}, locale) {
     ? translateMessage(locale, 'node.focus.detail', { label, detail })
     : translateMessage(locale, 'node.focus', { label });
   return `id="node-${esc(id)}" data-node-id="${esc(id)}" data-node-label="${esc(label)}" tabindex="0" role="button" aria-label="${esc(aria)}" aria-pressed="false"${optional}`;
-}
-
-// Native SVG titles preserve a compact details-on-demand fallback when the
-// canonical SVG is embedded inline outside the full Archify viewer.
-export function focusNodeTitle(label, metadata = {}) {
-  const parts = [label, metadata.sublabel, metadata.context, metadata.tag, metadata.brand]
-    .filter((value) => value !== undefined && value !== null && String(value).trim() !== '');
-  return `<title>${esc(parts.join(' · '))}</title>`;
 }
 
 export function focusEdgeAttrs(from, to, label, key, id) {

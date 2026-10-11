@@ -7,7 +7,6 @@ import {
   animateAttr,
   focusEdgeAttrs,
   focusNodeAttrs,
-  focusNodeTitle,
   svgAccessibleText,
   svgRootAttrs,
   validateCrossCollectionContracts,
@@ -5420,7 +5419,6 @@ function renderNode(node) {
   const brand = renderBrandMark(node, { x: node.x + node.width - 22, y: node.y + 6 });
   const passport = { kind: node.type, sublabel: node.sublabel, tag: node.tag, context: nodeContext(node), ...brandMetadataFor(node) };
   return `        <g ${focusNodeAttrs(node.id, node.label, passport, workflow.meta.locale)}>
-          ${focusNodeTitle(node.label, passport)}
           <rect x="${node.x}" y="${node.y}" width="${node.width}" height="${node.height}" rx="8" class="c-mask"/>
           <rect x="${node.x}" y="${node.y}" width="${node.width}" height="${node.height}" rx="8" class="${fill}"${animateAttr(workflow.meta, 'node', nodeStep(node))} stroke-width="1.5"/>
           ${renderSemanticSigil(node.type, { icon: node.icon, x: node.x + 6, y: node.y + labelLayout.sigilY, size: labelLayout.sigilSize })}${brand ? `\n          ${brand}` : ''}

@@ -4,7 +4,6 @@ import { esc, renderDefinitions, textUnits } from '../shared/utils.mjs';
 import {
   animateAttr,
   focusNodeAttrs,
-  focusNodeTitle,
   loadDiagram,
   svgAccessibleText,
   svgRootAttrs,
@@ -462,7 +461,6 @@ function renderEvent(card, order) {
   // card body stays a quiet surface for the text.
   const accent = `<line x1="${card.left + 6}" y1="${card.top + 7}" x2="${card.left + 6}" y2="${card.top + card.height - 7}" class="tl-accent tl-accent-${tone}" stroke-width="3" stroke-linecap="round"/>`;
   return `        <g ${focusNodeAttrs(card.id, card.title, passport, locale)} data-timeline-at="${esc(card.at)}" data-timeline-ms="${card.t}" data-timeline-x="${card.x}">
-          ${focusNodeTitle(card.title, passport)}
           <rect x="${card.left}" y="${card.top}" width="${card.width}" height="${card.height}" rx="7" class="c-mask"/>
           <rect x="${card.left}" y="${card.top}" width="${card.width}" height="${card.height}" rx="7" class="c-${tone} tl-card"${animateAttr(tl.meta, 'node', order)} stroke-width="1"/>
           ${accent}

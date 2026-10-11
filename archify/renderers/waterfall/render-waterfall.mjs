@@ -5,7 +5,6 @@ import {
   animateAttr,
   focusEdgeAttrs,
   focusNodeAttrs,
-  focusNodeTitle,
   loadDiagram,
   svgAccessibleText,
   svgRootAttrs,
@@ -286,7 +285,6 @@ function renderRow(row, order) {
   const paint = row.open ? 'wf-open' : row.parentBar ? 'wf-span' : 'wf-solid';
   const openTail = row.open ? `<path d="M ${row.x1 - 8} ${barY + 2} L ${row.x1 - 2} ${midY} L ${row.x1 - 8} ${barY + layout.barH - 2}" class="wf-open-edge t-${row.tone}" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>` : '';
   return `        <g ${focusNodeAttrs(row.id, row.name, passport, locale)} data-waterfall-start="${row.start}" data-waterfall-end="${row.open ? '' : row.end}" data-waterfall-duration="${row.duration}" data-waterfall-depth="${row.depth}" data-waterfall-status="${row.status}"${service ? ` data-waterfall-service="${esc(service)}"` : ''}>
-          ${focusNodeTitle(row.name, passport)}
           <rect x="${layout.margin - 8}" y="${row.y + 1}" width="${width - layout.margin * 2 + 16}" height="${layout.rowH - 2}" rx="6" class="c-mask wf-row${order % 2 ? ' wf-row-alt' : ''}"/>
           <rect x="${row.x0}" y="${barY}" width="${row.width}" height="${layout.barH}" rx="${Math.min(4, row.width / 2)}" class="c-${row.tone} ${paint}"${animateAttr(wf.meta, 'node', order)} stroke-width="1.2"/>
           ${openTail}
