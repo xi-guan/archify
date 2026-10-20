@@ -104,7 +104,7 @@
       }
       function edgeShapes(edge) {
         if (/^(path|line|polyline)$/i.test(edge.tagName)) return [edge];
-        return Array.prototype.slice.call(edge.querySelectorAll('path:not([data-ambient-flow-overlay]), line, polyline'));
+        return Archify.edgeGeometry(edge);
       }
       function removeOverlay() {
         Array.prototype.forEach.call(svg.querySelectorAll('[data-route-probe-overlay]'), function (overlay) {
@@ -147,6 +147,9 @@
         edges().forEach(function (edge) {
           edge.removeAttribute('data-route-journey-state');
           edge.removeAttribute('data-route-journey-current');
+        });
+        Array.prototype.forEach.call(svg.querySelectorAll('[data-route-chip-step]'), function (chip) {
+          chip.removeAttribute('data-route-journey-state');
         });
         Array.prototype.forEach.call(path.querySelectorAll('[data-route-journey-index]'), function (button, index) {
           button.removeAttribute('data-route-journey-state');
@@ -358,6 +361,50 @@
         clone.style.setProperty('--route-step', String(step));
         return clone;
       }
+      // fork: a numbered disc per hop at the segment's midpoint, slid toward the start past its label; short hops keep it by their start
+      function forkStepChip(edge, step) {
+        var best = edgeShapes(edge).reduce(function (found, shape) {
+          var length = typeof shape.getTotalLength === 'function' ? shape.getTotalLength() : 0;
+          return length > found.length ? { shape: shape, length: length } : found;
+        }, { shape: null, length: 0 });
+        if (!best.shape) return null;
+        var radius = 8;
+        var label = Array.prototype.find.call(svg.querySelectorAll('[data-edge-from][data-edge-to] > rect.c-mask'), function (mask) {
+          return ['data-edge-from', 'data-edge-to', 'data-edge-key', 'data-edge-label'].every(function (name) {
+            return mask.parentNode.getAttribute(name) === edge.getAttribute(name);
+          });
+        });
+        var box = label ? label.getBBox() : null;
+        var clear = function (at) {
+          var point = best.shape.getPointAtLength(at);
+          var gap = radius + 4;
+          return !box || point.x < box.x - gap || point.x > box.x + box.width + gap || point.y < box.y - gap || point.y > box.y + box.height + gap;
+        };
+        // room for the disc, the 5.8 arrowhead and 8 to spare
+        var at = best.length < radius * 2 + 5.8 + 8 ? Math.min(best.length / 2, radius + 2) : best.length / 2;
+        if (!clear(at)) {
+          var before = at;
+          while (before > radius + 2 && !clear(before)) before -= 2;
+          var after = at;
+          while (after < best.length - radius - 8 && !clear(after)) after += 2;
+          at = clear(before) ? before : (clear(after) ? after : at);
+        }
+        var point = best.shape.getPointAtLength(at);
+        var chip = document.createElementNS(namespace, 'g');
+        chip.setAttribute('class', 'fork-route-step');
+        chip.setAttribute('data-route-chip-step', String(step));
+        var disc = document.createElementNS(namespace, 'circle');
+        disc.setAttribute('cx', point.x.toFixed(2));
+        disc.setAttribute('cy', point.y.toFixed(2));
+        disc.setAttribute('r', String(radius));
+        var number = document.createElementNS(namespace, 'text');
+        number.setAttribute('x', point.x.toFixed(2));
+        number.setAttribute('y', point.y.toFixed(2));
+        number.textContent = String(step + 1);
+        chip.appendChild(disc);
+        chip.appendChild(number);
+        return chip;
+      }
       function renderOverlay(routeEdges) {
         removeOverlay();
         if (!routeEdges.length) return;
@@ -365,15 +412,23 @@
         overlay.setAttribute('class', 'route-probe-overlay');
         overlay.setAttribute('data-route-probe-overlay', '');
         overlay.setAttribute('aria-hidden', 'true');
+        var lights = [];
         routeEdges.forEach(function (edge, step) {
           var wrapper = document.createElementNS(namespace, 'g');
           if (edge.hasAttribute('transform')) wrapper.setAttribute('transform', edge.getAttribute('transform'));
-          edgeShapes(edge).forEach(function (shape) { wrapper.appendChild(traceGeometry(shape, step)); });
+          edgeShapes(edge).forEach(function (shape) {
+            var light = traceGeometry(shape, step);
+            lights.push([light, shape]);
+            wrapper.appendChild(light);
+          });
+          var chip = html.hasAttribute('data-fork-style') && forkStepChip(edge, step);
+          if (chip) wrapper.appendChild(chip);
           if (wrapper.childNodes.length) overlay.appendChild(wrapper);
         });
         var firstNode = svg.querySelector('[data-node-id]');
         if (firstNode) svg.insertBefore(overlay, firstNode);
         else svg.appendChild(overlay);
+        Archify.labelLights(svg, overlay, lights);
       }
       function journeyButtons() {
         return Array.prototype.slice.call(path.querySelectorAll('[data-route-journey-index]'));
@@ -470,12 +525,18 @@
         overlay.setAttribute('aria-hidden', 'true');
         var wrapper = document.createElementNS(namespace, 'g');
         if (edge.hasAttribute('transform')) wrapper.setAttribute('transform', edge.getAttribute('transform'));
-        edgeShapes(edge).forEach(function (shape) { wrapper.appendChild(journeyGeometry(shape)); });
+        var lights = [];
+        edgeShapes(edge).forEach(function (shape) {
+          var light = journeyGeometry(shape);
+          lights.push([light, shape]);
+          wrapper.appendChild(light);
+        });
         if (!wrapper.childNodes.length) return false;
         overlay.appendChild(wrapper);
         var firstNode = svg.querySelector('[data-node-id]');
         if (firstNode) svg.insertBefore(overlay, firstNode);
         else svg.appendChild(overlay);
+        Archify.labelLights(svg, overlay, lights);
         if (Archify.motionGovernor && Archify.motionGovernor.capable) {
           var token = 0;
           token = Archify.motionGovernor.claim('route', function () {
@@ -514,6 +575,8 @@
           edge.setAttribute('data-route-journey-state', state);
           if (destination === journeyIndex) edge.setAttribute('data-route-journey-current', '');
           else edge.removeAttribute('data-route-journey-current');
+          var chip = svg.querySelector('[data-route-chip-step="' + step + '"]');
+          if (chip) chip.setAttribute('data-route-journey-state', state);
         });
         var buttons = journeyButtons();
         buttons.forEach(function (button, step) {

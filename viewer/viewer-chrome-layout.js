@@ -10,8 +10,11 @@
       var svg = container && container.querySelector(':scope > svg');
       var nav = container && container.querySelector('.diagram-nav');
       var legend = svg && svg.querySelector('[data-legend]');
+      var titleRow = document.querySelector('.header-row');
+      var toolbar = document.querySelector('.toolbar');
       var frame = 0;
       var settleFrame = 0;
+      var placeFrame = 0;
       var reserve = 0;
       var railLatched = false;
       var probingBaseline = false;
@@ -79,9 +82,48 @@
           height: height
         };
       }
+      function rowHolds() {
+        var title = titleRow.querySelector('h1');
+        var line = title ? parseFloat(window.getComputedStyle(title).lineHeight) : 0;
+        return titleRow.scrollWidth <= titleRow.clientWidth + 1 &&
+          (!title || !line || title.getBoundingClientRect().height < line * 1.5);
+      }
+      // the dock joins the title row when it fits beside a one-line title, so it takes no stage height
+      function placeNav() {
+        if (!nav || !container || !titleRow || !toolbar) return;
+        var header = titleRow.parentNode;
+        // fork style only, so classic keeps upstream's stage dock; ?dock=stage keeps it in fork style too
+        var wanted = html.hasAttribute('data-fork-style') && window.innerWidth > 720 &&
+          new URLSearchParams(window.location.search).get('dock') !== 'stage' &&
+          html.getAttribute('data-embed') !== 'true' &&
+          html.getAttribute('data-present') !== 'true';
+        var map = document.getElementById('btn-overview-map');
+        // measure with Map showing: zooming in reveals it later and must not overflow the row
+        var forceMap = Boolean(map && !map.hidden);
+        if (forceMap) map.style.display = 'inline-flex';
+        if (wanted) {
+          // the stock padding reserves a fixed 29.5rem for the toolbar; the dock needs the unused part
+          header.style.paddingRight = Math.ceil(toolbar.getBoundingClientRect().width + 16) + 'px';
+          if (nav.parentNode !== titleRow) titleRow.appendChild(nav);
+        }
+        if (nav.parentNode === titleRow && !(wanted && rowHolds())) container.appendChild(nav);
+        if (forceMap) map.style.removeProperty('display');
+        if (nav.parentNode === titleRow) html.setAttribute('data-nav-placement', 'header');
+        else {
+          html.removeAttribute('data-nav-placement');
+          header.style.removeProperty('padding-right');
+        }
+      }
+      function schedulePlace() {
+        if (placeFrame) return;
+        placeFrame = requestAnimationFrame(function () {
+          placeFrame = 0;
+          placeNav();
+        });
+      }
       function eligible() {
         return Boolean(
-          container && svg && nav &&
+          container && svg && nav && nav.parentNode === container &&
           window.innerWidth > 720 &&
           html.getAttribute('data-embed') !== 'true' &&
           (!window.matchMedia || !window.matchMedia('print').matches) &&
@@ -296,7 +338,7 @@
           lastReceipt ? lastReceipt.stageGap : ''
         ].join('|');
       }
-      function layoutPending() { return Boolean(frame || settleFrame || liftFrame || probingBaseline); }
+      function layoutPending() { return Boolean(frame || settleFrame || liftFrame || placeFrame || probingBaseline); }
       function whenStable() {
         return Archify.waitForStableLayout({
           schedule: schedule,
@@ -307,12 +349,14 @@
       }
       archifyLayoutOwners.viewerChrome = { schedule: schedule, pending: layoutPending, snapshot: stableSnapshot };
 
+      // the title-row observer below covers resizes; this is only for browsers without ResizeObserver
+      if (typeof ResizeObserver !== 'function') window.addEventListener('resize', placeNav, { passive: true });
       window.addEventListener('resize', reprobe, { passive: true });
       window.addEventListener('scroll', scheduleLift, { passive: true });
       window.addEventListener('load', schedule, { once: true });
       window.addEventListener('beforeprint', schedule);
       window.addEventListener('afterprint', reprobe);
-      if (document.fonts && document.fonts.ready) document.fonts.ready.then(reprobe).catch(function () {});
+      if (document.fonts && document.fonts.ready) document.fonts.ready.then(function () { placeNav(); return reprobe(); }).catch(function () {});
       if (typeof ResizeObserver === 'function') {
         var resizeObserver = new ResizeObserver(schedule);
         [nav, svg, legend].forEach(function (element) { if (element) resizeObserver.observe(element); });
@@ -320,6 +364,9 @@
         // size. Follow that box for dock placement, independently of scrolling
         // and the baseline stage-rail measurement.
         new ResizeObserver(scheduleLift).observe(container);
+        // late toolbar labels and reader narrowing fire no window resize; placing next frame avoids an observer loop
+        var placeObserver = new ResizeObserver(schedulePlace);
+        [toolbar, titleRow].forEach(function (element) { if (element) placeObserver.observe(element); });
       }
       if (typeof MutationObserver === 'function') {
         var contentObserver = new MutationObserver(function (records) {
@@ -328,8 +375,10 @@
           var viewerModeChanged = records.some(function (record) {
             return record.target === html && record.attributeName !== 'data-theme';
           });
-          if (viewerModeChanged) reprobe();
-          else schedule();
+          if (viewerModeChanged) {
+            placeNav();
+            reprobe();
+          } else schedule();
         });
         if (legend) contentObserver.observe(legend, { attributes: true, childList: true, subtree: true });
         contentObserver.observe(html, {
@@ -337,6 +386,8 @@
           attributeFilter: ['data-embed', 'data-present', 'data-preset', 'data-theme']
         });
       }
+      // camera and radar look up the dock inside the stage while their scripts run, so it moves on the first frame
+      schedulePlace();
       schedule();
 
       return {

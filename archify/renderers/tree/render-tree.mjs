@@ -5,7 +5,6 @@ import {
   animateAttr,
   focusEdgeAttrs,
   focusNodeAttrs,
-  focusNodeTitle,
   loadDiagram,
   svgAccessibleText,
   svgRootAttrs,
@@ -452,7 +451,6 @@ function renderNode(node) {
   const [sx, sy] = node.stacked || !down ? [node.x, node.y + node.height / 2] : [node.x + node.width / 2, node.y];
   const socket = node.isRoot ? '' : `<circle cx="${sx}" cy="${sy}" r="2.6" class="tree-socket" stroke-width="1.4"/>`;
   return `        <g ${focusNodeAttrs(node.id, node.label, passport, locale)} data-tree-depth="${node.depth}"${treeAttrs(node.id)} class="${hueClass(node.id)}">
-          ${focusNodeTitle(node.label, passport)}
           ${stack}
           <rect x="${node.x}" y="${node.y}" width="${node.width}" height="${node.height}" rx="10" class="c-mask"/>
           <rect x="${node.x}" y="${node.y}" width="${node.width}" height="${node.height}" rx="10" class="c-${tone} ${role}"${animateAttr(tree.meta, 'node', node.depth)} stroke-width="${node.isRoot ? 0 : leaf ? 1 : 1.2}"/>

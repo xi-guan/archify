@@ -168,7 +168,7 @@ test('all five renderers keep the semantic sigil and add one export-safe brand b
     assert.match(html, /data-node-brand="OpenAI"/i, type);
     assert.match(html, /data-brand-mark="openai"[^>]+data-brand-status="preset"/i, type);
     assert.match(html, /class="semantic-sigil /, type);
-    assert.match(html, /<title>[^<]*OpenAI<\/title>/i, type);
+    assert.match(html, /aria-label="[^"]*OpenAI[^"]*"/i, type);
 
     const [, collection] = cases[type];
     const diagram = JSON.parse(fs.readFileSync(input, 'utf8'));

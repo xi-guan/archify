@@ -41,7 +41,7 @@
       }
       function edgeShapes(edge) {
         if (/^(path|line|polyline)$/i.test(edge.tagName)) return [edge];
-        return Array.prototype.slice.call(edge.querySelectorAll('path:not([data-ambient-flow-overlay]), line, polyline'));
+        return Archify.edgeGeometry(edge);
       }
       function removeOverlay() {
         Array.prototype.forEach.call(svg.querySelectorAll('[data-intent-trace-overlay]'), function (overlay) {
@@ -108,6 +108,7 @@
         overlay.setAttribute('data-intent-trace-overlay', '');
         overlay.setAttribute('aria-hidden', 'true');
         var related = Object.create(null);
+        var lights = [];
         var seen = {};
         var counts = { out: 0, in: 0, loop: 0 };
         related[id] = true;
@@ -129,7 +130,9 @@
           var wrapper = document.createElementNS(namespace, 'g');
           if (edge.hasAttribute('transform')) wrapper.setAttribute('transform', edge.getAttribute('transform'));
           edgeShapes(edge).forEach(function (shape) {
-            wrapper.appendChild(traceGeometry(shape, direction));
+            var light = traceGeometry(shape, direction);
+            lights.push([light, shape]);
+            wrapper.appendChild(light);
           });
           if (wrapper.childNodes.length) overlay.appendChild(wrapper);
         });
@@ -140,11 +143,11 @@
           if (nodeId === id) node.setAttribute('data-intent-trace-selected', '');
         });
         if (overlay.childNodes.length) {
-          var firstEdge = edgeList[0];
+          // above every edge: crossover underlays would otherwise cover the signal's core
           var firstNode = svg.querySelector('[data-node-id]');
-          if (firstEdge && firstEdge.parentNode) firstEdge.parentNode.insertBefore(overlay, firstEdge);
-          else if (firstNode) svg.insertBefore(overlay, firstNode);
+          if (firstNode) firstNode.parentNode.insertBefore(overlay, firstNode);
           else svg.appendChild(overlay);
+          Archify.labelLights(svg, overlay, lights, { contrast: true });
         }
         activeId = id;
         svg.setAttribute('data-intent-trace-active', id);

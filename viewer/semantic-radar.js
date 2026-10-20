@@ -112,7 +112,8 @@
       function placementContext() {
         var containerRect = visibleRect(container);
         if (!containerRect) return null;
-        var controlRect = visibleRect(navigation);
+        // a dock in the title row sits above the stage and bounds nothing inside it
+        var controlRect = container.contains(navigation) ? visibleRect(navigation) : null;
         var left = Math.max(placementGap, containerRect.left + placementGap);
         var top = Math.max(placementGap, containerRect.top + placementGap);
         var right = Math.min(window.innerWidth - placementGap, containerRect.right - placementGap);

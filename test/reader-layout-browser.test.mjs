@@ -638,6 +638,21 @@ test('Reader Layout preserves final-artifact behavior across its ownership bound
           assert.deepEqual((await snapshot(`${name}-${viewportWidth}-return`)).geometry, before.geometry);
         }
       }
+      // zooming out pins the stage to the scaled height, which must not centre the canvas top out of reach
+      await load(readerFixture('width-first-zoom-out', 1100, 2400, 'data-reader-fit="width-first"'), { width: 2048, height: 1320 });
+      assert.equal((await snapshot('width-first-zoom-out')).readerArea, 'true');
+      await evaluate('Archify.view.zoomOut()');
+      await stable();
+      const zoomedTop = await evaluate(`(async function () {
+        var svg = document.querySelector('.diagram-container > svg');
+        while (!/^matrix\\(0\\.75,/.test(getComputedStyle(svg).transform)) await new Promise(function (done) { requestAnimationFrame(done); });
+        await new Promise(function (done) { requestAnimationFrame(function () { requestAnimationFrame(done); }); });
+        var stage = svg.parentElement;
+        var style = getComputedStyle(stage);
+        return { offset: svg.getBoundingClientRect().top - stage.getBoundingClientRect().top - parseFloat(style.paddingTop) - parseFloat(style.borderTopWidth),
+          pinned: stage.style.height };
+      })()`, true);
+      assert.ok(zoomedTop.pinned && Math.abs(zoomedTop.offset) <= 1, 'zoomed-out canvas top stays reachable: ' + JSON.stringify(zoomedTop));
       // UI and column metadata alone never declare automatic Reader fitting.
       for (const marker of ['data-sequence-column-fit="fixed"', 'data-waterfall-ui=""', '']) {
         const authored = readerFixture('undeclared-reader', 1100, 2400, marker);

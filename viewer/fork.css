@@ -1,0 +1,449 @@
+/* fork style (archify-design v3): only applies when the renderer marks <html data-fork-style>, so ARCHIFY_FORK_STYLE=classic keeps upstream's look */
+
+[data-fork-style][data-preset="classic"][data-theme="light"] {
+  --bg: #f4f5f7; --grid: #e9edf2; --canvas-dot: #e2e7ec; --panel: #ffffff; --panel-border: #e5e7eb; --mask: #ffffff;
+  --text: #111827; --text-muted: #475569; --text-dim: #606b7d;
+  --lane-fill: rgba(15, 23, 42, 0.035); --lane-stroke: #cbd5e1;
+  --arrow: #64748b; --arrow-emphasis: #1e293b; --arrow-security: #9f1239; --arrow-dashed: #64748b;
+  --arrow-label: #475569; --arrow-emphasis-label: #1e293b; --arrow-security-label: #881337; --arrow-dashed-label: #475569;
+  --signal: #d946ef; --signal-head: #a21caf;
+  --chip-fill: #f1f5f9; --focus-ring: #111827;
+  --tree-root-fill: #334155; --tree-root-text: #f8fafc; --tree-root-subtext: #e2e8f0;
+  --frontend-stroke: #0891b2;   --frontend-text: #0e7490;   --frontend-fill: #cffafe;   --frontend-wash: #ecfeff;   --frontend-soft: #67e8f9;
+  --backend-stroke: #059669;    --backend-text: #047857;    --backend-fill: #d1fae5;    --backend-wash: #ecfdf5;    --backend-soft: #6ee7b7;
+  --database-stroke: #7c3aed;   --database-text: #6d28d9;   --database-fill: #ede9fe;   --database-wash: #f5f3ff;   --database-soft: #c4b5fd;
+  --cloud-stroke: #d97706;      --cloud-text: #b45309;      --cloud-fill: #fef3c7;      --cloud-wash: #fffbeb;      --cloud-soft: #fcd34d;
+  --security-stroke: #e11d48;   --security-text: #be123c;   --security-fill: #ffe4e6;   --security-wash: #fff1f2;   --security-soft: #fda4af;
+  --messagebus-stroke: #9a3412; --messagebus-text: #7c2d12; --messagebus-fill: #fed7aa; --messagebus-wash: #ffedd5; --messagebus-soft: #fb923c;
+  --external-stroke: #78716c;   --external-text: #57534e;   --external-fill: #f5f5f4;   --external-wash: #fafaf9;   --external-soft: #d6d3d1;
+  --comet-wake-opacity: 0.28; --comet-halo-opacity: 0.18; --comet-glow-opacity: 0.32; --comet-tail-opacity: 0.55; --comet-head-opacity: 1;
+  /* a literal colour: chromium cannot interpolate a drop-shadow into color-mix(... calc()) and fades in near-black first */
+  --arrive-glow: rgba(217, 70, 239, 0.5);
+}
+
+[data-fork-style][data-preset="classic"][data-theme="dark"] {
+  --bg: #020617; --grid: #1e293b; --canvas-dot: rgba(148, 163, 184, 0.14); --panel: #0f172a; --panel-border: #1e293b; --mask: #0f172a;
+  --text: #f8fafc; --text-muted: #94a3b8; --text-dim: #7c8799;
+  --lane-fill: rgba(255, 255, 255, 0.03); --lane-stroke: #334155;
+  --arrow: #94a3b8; --arrow-emphasis: #e2e8f0; --arrow-security: #e11d48; --arrow-dashed: #94a3b8;
+  --arrow-label: #94a3b8; --arrow-emphasis-label: #e2e8f0; --arrow-security-label: #fda4af; --arrow-dashed-label: #94a3b8;
+  --signal: #e879f9; --signal-head: #f0abfc;
+  --chip-fill: #1e293b; --focus-ring: #f8fafc;
+  --tree-root-fill: #334155; --tree-root-text: #f8fafc; --tree-root-subtext: #e2e8f0;
+  --frontend-stroke: #22d3ee;   --frontend-text: #67e8f9;   --frontend-fill: #123549;   --frontend-wash: #102438;   --frontend-soft: #186c82;
+  --backend-stroke: #34d399;    --backend-text: #6ee7b7;    --backend-fill: #15353c;    --backend-wash: #122432;    --backend-soft: #206c5c;
+  --database-stroke: #8b5cf6;   --database-text: #c4b5fd;   --database-fill: #23224b;   --database-wash: #181c38;   --database-soft: #473686;
+  --cloud-stroke: #fbbf24;      --cloud-text: #fcd34d;      --cloud-fill: #353229;      --cloud-wash: #20232a;      --cloud-soft: #796327;
+  --security-stroke: #fb7185;   --security-text: #fda4af;   --security-fill: #352539;   --security-wash: #201d30;   --security-soft: #794053;
+  --messagebus-stroke: #ea580c; --messagebus-text: #fb923c; --messagebus-fill: #322125; --messagebus-wash: #1e1c28; --messagebus-soft: #72341c;
+  --external-stroke: #a8a29e;   --external-text: #d6d3d1;   --external-fill: #272d3d;   --external-wash: #1a2132;   --external-soft: #54565e;
+  --comet-wake-opacity: 0.24; --comet-halo-opacity: 0.16; --comet-glow-opacity: 0.5; --comet-tail-opacity: 0.45; --comet-head-opacity: 0.95;
+  --arrive-glow: rgba(232, 121, 249, 0.65);
+}
+
+/* export copies every variable it reads off a probe; left undefined, this one would come out empty and void the width calc */
+[data-fork-style][data-preset="classic"] { --fork-trace-add: 0px; }
+
+/* four line kinds; highlights add 1 through --fork-trace-add, so each kind keeps its own base width */
+html[data-fork-style][data-preset="classic"] .diagram-container svg :is(path, line, polyline).a-default  { stroke: var(--arrow); stroke-width: calc(1.25px + var(--fork-trace-add)); stroke-linecap: round; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg :is(path, line, polyline).a-emphasis { stroke: var(--arrow-emphasis); stroke-width: calc(1.75px + var(--fork-trace-add)); stroke-linecap: round; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg :is(path, line, polyline).a-security { stroke: var(--arrow-security); stroke-width: calc(1.75px + var(--fork-trace-add)); stroke-dasharray: 0 5; stroke-linecap: round; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg :is(path, line, polyline).a-dashed   { stroke: var(--arrow-dashed); stroke-width: calc(1.25px + var(--fork-trace-add)); stroke-dasharray: 6 4; stroke-linecap: round; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .m-default  { fill: var(--arrow); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .m-emphasis { fill: var(--arrow-emphasis); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .m-security { fill: var(--arrow-security); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .m-dashed   { fill: var(--arrow-dashed); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .t-edge-default  { fill: var(--arrow-label); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .t-edge-emphasis { fill: var(--arrow-emphasis-label); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .t-edge-security { fill: var(--arrow-security-label); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .t-edge-dashed   { fill: var(--arrow-dashed-label); }
+/* erd and class end symbols, and structural lines, use the plain line colour */
+html[data-fork-style][data-preset="classic"] .diagram-container svg marker.a-default { stroke: var(--arrow) !important; stroke-width: 1.25; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .cl-marker { stroke: var(--arrow); stroke-width: 1.25; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .cl-marker-filled { fill: var(--arrow); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .cl-marker-hollow { fill: var(--mask); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg :is(.tree-edge, .tree-edge-hued, .tree-edge-trunk) { stroke: var(--arrow); stroke-width: 1.25; }
+
+/* cards: opaque fills, one border width, no drop shadow */
+/* a transparent shadow, not none, so the arrival keyframes can still append their glow */
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container > svg [data-node-id] > rect { --ambient-node-base-filter: drop-shadow(0 0 0 transparent) !important; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg [data-node-id] > rect:is(.c-frontend, .c-backend, .c-database, .c-cloud, .c-security, .c-messagebus, .c-external):not(.tree-root) { stroke-width: 1.25; }
+/* the tree root is the same dark slate in both themes */
+html[data-fork-style][data-preset="classic"] .diagram-container svg .tree-root { fill: var(--tree-root-fill); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .tree-hue-root .tree-label { fill: var(--tree-root-text); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .tree-hue-root .tree-sublabel { fill: var(--tree-root-subtext); opacity: 1; }
+
+/* legend heading is a small caps label, not a second title */
+html[data-fork-style] .diagram-container svg [data-legend] > text:first-child { font-size: 9px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; fill: var(--text-dim); }
+
+/* live comet: one signal colour, no white core */
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg[data-animation="trace"] {
+  --flow-wake-peak: var(--comet-wake-opacity); --flow-halo-peak: var(--comet-halo-opacity); --flow-glow-peak: var(--comet-glow-opacity);
+  --flow-tail-peak: var(--comet-tail-opacity); --flow-head-peak: var(--comet-head-opacity);
+}
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg .ambient-edge-flow { stroke: var(--signal); }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg .ambient-flow-wake { stroke-width: 3; }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg .ambient-flow-glow { stroke-width: 10; filter: blur(3px); }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg .ambient-flow-tail { stroke-width: 2.75; }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg .ambient-flow-head { stroke: var(--signal-head); stroke-width: 3; }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg .ambient-flow-playhead { stroke: var(--signal-head); stroke-width: 1.25; }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg .ambient-flow-playhead-glow { stroke: var(--signal); --flow-peak: 0.22; }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg .ambient-flow-fill { fill: var(--flow-fill, var(--arrow)); --flow-peak: 0.5; }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg .ambient-flow-fill-failed { fill: var(--arrow-security); }
+
+/* cards, frames, sequence, edge labels, legend (design §3 labels, §4.1-4.3, §4.9); erd, class, tree, timeline and waterfall draw their own cards */
+
+/* node cards: solid type fill, one border, radius 6 */
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg:not([data-erd-ui], [data-class-ui], [data-tree-ui], [data-timeline-ui], [data-waterfall-ui]) [data-node-id] > rect.c-mask { rx: 6px; }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg:not([data-erd-ui], [data-class-ui], [data-tree-ui], [data-timeline-ui], [data-waterfall-ui]) [data-node-id] > rect[data-animate="node"] { stroke-width: 1.25; rx: 6px; }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg:not([data-erd-ui], [data-class-ui], [data-tree-ui], [data-timeline-ui], [data-waterfall-ui]) [data-node-id] > rect.c-frontend[data-animate="node"]   { fill: var(--frontend-fill);   stroke: var(--frontend-stroke); }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg:not([data-erd-ui], [data-class-ui], [data-tree-ui], [data-timeline-ui], [data-waterfall-ui]) [data-node-id] > rect.c-backend[data-animate="node"]    { fill: var(--backend-fill);    stroke: var(--backend-stroke); }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg:not([data-erd-ui], [data-class-ui], [data-tree-ui], [data-timeline-ui], [data-waterfall-ui]) [data-node-id] > rect.c-database[data-animate="node"]   { fill: var(--database-fill);   stroke: var(--database-stroke); }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg:not([data-erd-ui], [data-class-ui], [data-tree-ui], [data-timeline-ui], [data-waterfall-ui]) [data-node-id] > rect.c-cloud[data-animate="node"]      { fill: var(--cloud-fill);      stroke: var(--cloud-stroke); }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg:not([data-erd-ui], [data-class-ui], [data-tree-ui], [data-timeline-ui], [data-waterfall-ui]) [data-node-id] > rect.c-security[data-animate="node"]   { fill: var(--security-fill);   stroke: var(--security-stroke); }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg:not([data-erd-ui], [data-class-ui], [data-tree-ui], [data-timeline-ui], [data-waterfall-ui]) [data-node-id] > rect.c-messagebus[data-animate="node"] { fill: var(--messagebus-fill); stroke: var(--messagebus-stroke); }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg:not([data-erd-ui], [data-class-ui], [data-tree-ui], [data-timeline-ui], [data-waterfall-ui]) [data-node-id] > rect.c-external[data-animate="node"]   { fill: var(--external-fill);   stroke: var(--external-stroke); }
+/* lifecycle terminal states keep their inner ring, 3 inside the card */
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg:not([data-erd-ui], [data-class-ui], [data-tree-ui], [data-timeline-ui], [data-waterfall-ui]) [data-node-id] > rect:is(.c-frontend, .c-backend, .c-database, .c-cloud, .c-security, .c-messagebus, .c-external):not([data-animate]) { fill: none; stroke-width: 1; rx: 3px; }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg:not([data-erd-ui], [data-class-ui], [data-tree-ui], [data-timeline-ui], [data-waterfall-ui]) [data-node-id] text.t-primary { fill: var(--text); font-weight: 600; }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg:not([data-erd-ui], [data-class-ui], [data-tree-ui], [data-timeline-ui], [data-waterfall-ui]) [data-node-id] text.t-muted { fill: var(--text-muted); }
+/* every diagram type draws its card icons with the card border width */
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg [data-node-id] .semantic-sigil { stroke-width: 1.25; opacity: 1; }
+
+/* type-coloured text (zoom details, group and region labels) uses the darker text step */
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg:not([data-erd-ui], [data-class-ui], [data-tree-ui], [data-timeline-ui], [data-waterfall-ui]) text.t-frontend   { fill: var(--frontend-text); }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg:not([data-erd-ui], [data-class-ui], [data-tree-ui], [data-timeline-ui], [data-waterfall-ui]) text.t-backend    { fill: var(--backend-text); }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg:not([data-erd-ui], [data-class-ui], [data-tree-ui], [data-timeline-ui], [data-waterfall-ui]) text.t-database   { fill: var(--database-text); }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg:not([data-erd-ui], [data-class-ui], [data-tree-ui], [data-timeline-ui], [data-waterfall-ui]) text.t-cloud      { fill: var(--cloud-text); }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg:not([data-erd-ui], [data-class-ui], [data-tree-ui], [data-timeline-ui], [data-waterfall-ui]) text.t-security   { fill: var(--security-text); }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg:not([data-erd-ui], [data-class-ui], [data-tree-ui], [data-timeline-ui], [data-waterfall-ui]) text.t-messagebus { fill: var(--messagebus-text); }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg:not([data-erd-ui], [data-class-ui], [data-tree-ui], [data-timeline-ui], [data-waterfall-ui]) text.t-external   { fill: var(--external-text); }
+
+/* lanes, groups, regions, segments, stages: radius 12, neutral or type-soft strokes */
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg:not([data-erd-ui], [data-class-ui], [data-tree-ui], [data-timeline-ui], [data-waterfall-ui]) rect.c-lane[data-composition-frame-kind="lane"] { fill: var(--lane-fill); stroke: none; rx: 12px; }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg:not([data-erd-ui], [data-class-ui], [data-tree-ui], [data-timeline-ui], [data-waterfall-ui]) rect.c-lane[data-composition-frame-kind="lane"]:has(+ [data-composition-frame-kind="exception-lane"]) { fill: var(--security-wash); }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg:not([data-erd-ui], [data-class-ui], [data-tree-ui], [data-timeline-ui], [data-waterfall-ui]) rect.c-lane[data-composition-frame-kind="group"] { fill: none; stroke: var(--lane-stroke); stroke-width: 1; stroke-dasharray: none; rx: 12px; }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg:not([data-erd-ui], [data-class-ui], [data-tree-ui], [data-timeline-ui], [data-waterfall-ui]) rect.c-security-group:is([data-composition-frame-kind="group"], [data-composition-frame-kind="security-group"]) { fill: none; stroke: var(--security-soft); stroke-width: 1; stroke-dasharray: 4 4; rx: 12px; }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg:not([data-erd-ui], [data-class-ui], [data-tree-ui], [data-timeline-ui], [data-waterfall-ui]) rect.c-region { fill: var(--cloud-wash); stroke: var(--cloud-soft); stroke-width: 1; stroke-dasharray: none; rx: 12px; }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg:not([data-erd-ui], [data-class-ui], [data-tree-ui], [data-timeline-ui], [data-waterfall-ui]) rect.c-lane:is([data-composition-frame-kind="segment"], [data-composition-frame-kind="stage"]) { fill: var(--lane-fill); stroke: var(--lane-stroke); stroke-width: 1; stroke-dasharray: 4 4; rx: 12px; }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg:not([data-erd-ui], [data-class-ui], [data-tree-ui], [data-timeline-ui], [data-waterfall-ui]) rect[data-lifecycle-frame] { fill: none; stroke: var(--lane-stroke); stroke-opacity: 1; stroke-width: 1; stroke-dasharray: 4 4; rx: 12px; }
+/* frame labels: lane, stage, segment and phase names are dim; the exception lane keeps its security colour */
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg:not([data-erd-ui], [data-class-ui], [data-tree-ui], [data-timeline-ui], [data-waterfall-ui]) :is([data-composition-frame-kind="lane"], [data-composition-frame-kind="stage"]) + text,
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg:not([data-erd-ui], [data-class-ui], [data-tree-ui], [data-timeline-ui], [data-waterfall-ui]) [data-graph-role="segment-label"] > text,
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg:not([data-erd-ui], [data-class-ui], [data-tree-ui], [data-timeline-ui], [data-waterfall-ui]) .phase-chip + text { fill: var(--text-dim); font-weight: 700; }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg:not([data-erd-ui], [data-class-ui], [data-tree-ui], [data-timeline-ui], [data-waterfall-ui]) [data-composition-frame-kind="exception-lane"] + text,
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg:not([data-erd-ui], [data-class-ui], [data-tree-ui], [data-timeline-ui], [data-waterfall-ui]) [data-composition-frame-kind="group"] + text,
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg:not([data-erd-ui], [data-class-ui], [data-tree-ui], [data-timeline-ui], [data-waterfall-ui]) [data-graph-role="structural-frame-label"] > text { font-weight: 700; }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg:not([data-erd-ui], [data-class-ui], [data-tree-ui], [data-timeline-ui], [data-waterfall-ui]) [data-graph-role="structural-frame-label-mask"] { fill: var(--mask); stroke: var(--cloud-soft); stroke-width: 1; rx: 8px; }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg:not([data-erd-ui], [data-class-ui], [data-tree-ui], [data-timeline-ui], [data-waterfall-ui]) [data-composition-frame-kind="security-group"] > [data-graph-role="structural-frame-label-mask"] { stroke: var(--security-soft); }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg:not([data-erd-ui], [data-class-ui], [data-tree-ui], [data-timeline-ui], [data-waterfall-ui]) [data-graph-role="segment-label"] > rect.c-mask { stroke: var(--lane-stroke); stroke-width: 1; rx: 9px; }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg:not([data-erd-ui], [data-class-ui], [data-tree-ui], [data-timeline-ui], [data-waterfall-ui]) rect.c-mask.phase-chip { fill: var(--mask); stroke: var(--lane-stroke); stroke-width: 1; rx: 8px; }
+/* phase rules carry an arrow class for colour only; they are plain hairlines here */
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg:not([data-erd-ui], [data-class-ui], [data-tree-ui], [data-timeline-ui], [data-waterfall-ui]) path.phase-rule { stroke: var(--lane-stroke); stroke-width: 1; stroke-dasharray: none; opacity: 1; }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg [data-graph-role="automatic-crossover"] > [data-graph-role="automatic-crossover-underlay"] { stroke: var(--mask); stroke-width: 5.25; }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg [data-graph-role="automatic-crossover"]:has(> :is(.a-emphasis, .a-security)) > [data-graph-role="automatic-crossover-underlay"] { stroke-width: 5.75; }
+
+/* sequence: dotted hairline lifelines, type-coloured activation bars, returns drawn as dashed messages */
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg[data-motion-choreography="sequence"] > path.a-default { stroke: var(--lane-stroke); stroke-width: 1; stroke-dasharray: 2 4; }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg[data-motion-choreography="sequence"] > rect:is(.c-frontend, .c-backend, .c-database, .c-cloud, .c-security, .c-messagebus, .c-external) { stroke-width: 1.25; rx: 3px; }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg[data-motion-choreography="sequence"] > rect.c-mask { rx: 3px; }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg[data-motion-choreography="sequence"] :is([data-edge-from], [data-legend-kind], [data-legend-semantic-kind]) > path.a-default[stroke-dasharray] { stroke: var(--arrow-dashed); stroke-width: calc(1.25px + var(--fork-trace-add)); stroke-dasharray: 6 4; }
+
+/* edge labels sit in a mask capsule with a hairline border; rx 8 = half the 16-high label (rx alone would turn a long box into an ellipse); sequence message names stay unboxed */
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg [data-edge-from] > rect.c-mask { fill: var(--mask); stroke: var(--lane-stroke); stroke-width: 1; rx: 8px; }
+
+/* legend: 3-radius swatches with the card border, neutral count chips */
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg [data-legend] :is([data-legend-kind], [data-legend-semantic-kind]) > :is(rect[class="c-frontend"], rect[class="c-backend"], rect[class="c-database"], rect[class="c-cloud"], rect[class="c-security"], rect[class="c-messagebus"], rect[class="c-external"]):not([style]) { stroke-width: 1.25; rx: 3px; }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg [data-legend] :is([data-legend-kind], [data-legend-semantic-kind]) > text.t-muted { fill: var(--text-muted); font-weight: 400; }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg [data-legend-kind]:not([data-legend-selected]) [data-legend-count-badge] rect { fill: var(--chip-fill); stroke: transparent; }
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg [data-legend-count-badge] text { fill: var(--text-muted); font-weight: 400; }
+
+/* erd, class and tree (design §4.4-4.6); the renderers' hue classes get the extra levels so the embedded rules keep working */
+html[data-fork-style][data-preset="classic"] .diagram-container svg .er-hue-frontend   { --er-soft: var(--frontend-soft);   --er-band-wash: var(--frontend-wash); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .er-hue-backend    { --er-soft: var(--backend-soft);    --er-band-wash: var(--backend-wash); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .er-hue-database   { --er-soft: var(--database-soft);   --er-band-wash: var(--database-wash); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .er-hue-cloud      { --er-soft: var(--cloud-soft);      --er-band-wash: var(--cloud-wash); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .er-hue-security   { --er-soft: var(--security-soft);   --er-band-wash: var(--security-wash); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .er-hue-messagebus { --er-soft: var(--messagebus-soft); --er-band-wash: var(--messagebus-wash); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .er-hue-external   { --er-hue: var(--external-stroke); --er-wash: var(--external-fill); --er-soft: var(--external-soft); --er-band-wash: var(--external-wash); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg :is([class*="er-hue-"], [class*="cl-hue-"], [class*="tree-hue-"]) { --hue-text: var(--text-muted); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg :is(.er-hue-frontend, .cl-hue-frontend, .tree-hue-frontend)       { --hue-soft: var(--frontend-soft);   --hue-wash: var(--frontend-wash);   --hue-fill: var(--frontend-fill);   --hue-text: var(--frontend-text); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg :is(.er-hue-backend, .cl-hue-backend, .tree-hue-backend)          { --hue-soft: var(--backend-soft);    --hue-wash: var(--backend-wash);    --hue-fill: var(--backend-fill);    --hue-text: var(--backend-text); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg :is(.er-hue-database, .cl-hue-database, .tree-hue-database)       { --hue-soft: var(--database-soft);   --hue-wash: var(--database-wash);   --hue-fill: var(--database-fill);   --hue-text: var(--database-text); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg :is(.er-hue-cloud, .cl-hue-cloud, .tree-hue-cloud)                { --hue-soft: var(--cloud-soft);      --hue-wash: var(--cloud-wash);      --hue-fill: var(--cloud-fill);      --hue-text: var(--cloud-text); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg :is(.er-hue-security, .cl-hue-security, .tree-hue-security)       { --hue-soft: var(--security-soft);   --hue-wash: var(--security-wash);   --hue-fill: var(--security-fill);   --hue-text: var(--security-text); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg :is(.er-hue-messagebus, .cl-hue-messagebus, .tree-hue-messagebus) { --hue-soft: var(--messagebus-soft); --hue-wash: var(--messagebus-wash); --hue-fill: var(--messagebus-fill); --hue-text: var(--messagebus-text); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg :is(.er-hue-external, .cl-hue-external, .tree-hue-external)       { --hue-soft: var(--external-soft);   --hue-wash: var(--external-wash);   --hue-fill: var(--external-fill);   --hue-text: var(--external-text); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .cl-hue-cloud { --cl-hue: var(--cloud-stroke); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .cl-hue-security { --cl-hue: var(--security-stroke); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .cl-hue-external { --cl-hue: var(--external-stroke); }
+
+/* erd */
+html[data-fork-style][data-preset="classic"] .diagram-container svg rect.c-lane.er-band { fill: var(--er-band-wash); stroke: var(--er-soft); stroke-width: 1; stroke-dasharray: none; rx: 12; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .er-band-pill { fill: var(--er-wash); stroke: var(--er-soft); stroke-width: 1; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .er-band-label { fill: var(--hue-text); }
+/* beats fork.css's 1.25 border for every typed card rect */
+html[data-fork-style][data-preset="classic"] .diagram-container svg [data-node-id][class*="er-hue-"] > rect.er-table:not(.c-mask) { fill: var(--mask); stroke: var(--er-soft); stroke-width: 1; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .er-table-cap { stroke: var(--er-hue); stroke-width: 3; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .er-header-rule { stroke: var(--er-soft); stroke-width: 1; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .er-zebra { fill: var(--er-band-wash); rx: 3; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .er-type { fill: var(--text-muted); opacity: 1; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .er-key-badge[data-er-badge] { fill: var(--database-fill); stroke: none; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .er-key-badge[data-er-badge="fk"] { fill: var(--messagebus-fill); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .er-key-badge[data-er-badge="uk"] { fill: var(--chip-fill); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .er-key-badge[data-er-badge] + text { fill: var(--database-text); font-weight: 700; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .er-key-badge[data-er-badge="fk"] + text { fill: var(--messagebus-text); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .er-key-badge[data-er-badge="uk"] + text { fill: var(--text-muted); }
+
+/* class */
+html[data-fork-style][data-preset="classic"] .diagram-container svg [data-node-id][class*="cl-hue-"] > rect.cl-type:not(.c-mask) { fill: var(--mask); stroke: var(--hue-soft); stroke-width: 1; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg [data-node-id][data-class-kind="abstract"] > rect.cl-type:not(.c-mask) { stroke-dasharray: 4 4; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg [data-node-id] > path.cl-header { fill: var(--hue-fill); stroke: none; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .cl-cap { stroke: var(--cl-hue); stroke-width: 3; }
+/* the design's stroke-coloured chip leaves the white letter under 4.5:1 for cloud, frontend and backend; the -text level passes in both themes */
+html[data-fork-style][data-preset="classic"] .diagram-container svg .cl-badge-chip { fill: var(--hue-text); rx: 3; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .cl-badge-letter { fill: var(--mask); font-weight: 700; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .cl-stereotype { fill: var(--text-muted); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .cl-rule { stroke: var(--hue-soft); stroke-width: 1; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .cl-zebra { fill: var(--hue-wash); rx: 3; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .cl-vis-chip { fill: var(--chip-fill); rx: 3; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg :is(.cl-member, .cl-param) { fill: var(--text); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .cl-type-ref { fill: var(--text-muted); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .cl-punct { fill: var(--text-muted); opacity: 0.8; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .cl-label-box { fill: var(--mask); stroke: var(--lane-stroke); stroke-width: 1; }
+/* the uml dash of dependency and realization takes the dashed line pattern */
+html[data-fork-style][data-preset="classic"] .diagram-container svg path.a-default.cl-relationship.cl-dashed { stroke-dasharray: 6 4; }
+
+/* tree */
+html[data-fork-style][data-preset="classic"] .diagram-container svg .tree-hue-root { --hue-soft: var(--lane-stroke); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg [class*="tree-hue-"] > rect:is(.c-mask, .tree-root, [data-tree-stack]) { rx: 6; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .tree-hue-root .tree-label { font-weight: 700; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg [data-node-id][class*="tree-hue-"] > rect.tree-branch:not(.c-mask) { fill: var(--tree-wash); stroke: var(--tree-hue); stroke-width: 1.25; rx: 6; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg [data-node-id][class*="tree-hue-"] > rect.tree-leaf:not(.c-mask) { fill: var(--mask); stroke: var(--hue-soft); stroke-width: 1; rx: 6; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg [data-node-id]:not([data-tree-depth="0"]) .tree-label { font-weight: 600; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg [data-node-id][class*="tree-hue-"] > rect[data-tree-stack] { fill: var(--mask); stroke: var(--hue-soft); stroke-width: 1; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .tree-accent { stroke: var(--tree-hue); stroke-width: 3; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .tree-socket { fill: var(--mask); stroke: var(--tree-hue); stroke-width: 1.25; r: 3.5; }
+/* :where keeps these under the embedded collapsed and hover states, which repaint the same disc and glyph */
+:where(html[data-fork-style][data-preset="classic"]) svg[data-tree-ui] circle.tree-toggle-disc { fill: var(--mask); stroke: var(--lane-stroke); stroke-width: 1; }
+:where(html[data-fork-style][data-preset="classic"]) svg[data-tree-ui] path.tree-toggle-glyph { stroke-width: 1.25; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .tree-count-pill { fill: var(--hue-text); }
+
+/* timeline (§4.7) */
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-timeline-ui] :is(.tl-lane, .tl-lane-alt) { fill: var(--lane-fill); opacity: 1; rx: 12px; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-timeline-ui] [data-timeline-lane] > text { font-weight: 600; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-timeline-ui] .tl-axis { stroke: var(--text-dim); stroke-width: 1; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-timeline-ui] .tl-grid { stroke: var(--lane-stroke); stroke-width: 1; stroke-dasharray: 2 4; opacity: 1; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-timeline-ui] .tl-tick { fill: var(--text-muted); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-timeline-ui] :is(.tl-lane-line, .tl-stem) { stroke: var(--lane-stroke); stroke-width: 1; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-timeline-ui] .tl-pin { stroke: var(--mask); stroke-width: 2; r: 5px; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-timeline-ui] .tl-pin-frontend { fill: var(--frontend-stroke); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-timeline-ui] .tl-pin-backend { fill: var(--backend-stroke); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-timeline-ui] .tl-pin-database { fill: var(--database-stroke); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-timeline-ui] .tl-pin-cloud { fill: var(--cloud-stroke); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-timeline-ui] .tl-pin-security { fill: var(--security-stroke); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-timeline-ui] .tl-pin-messagebus { fill: var(--messagebus-stroke); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-timeline-ui] .tl-pin-external { fill: var(--external-stroke); }
+/* event cards are neutral; the type colour lives in the left accent bar, the time and the pin */
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-timeline-ui] [data-node-id] > rect.tl-card { fill: var(--mask); fill-opacity: 1; stroke: var(--lane-stroke); stroke-opacity: 1; stroke-width: 1; rx: 6px; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-timeline-ui] [data-node-id] > rect.c-mask { rx: 6px; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-timeline-ui] .tl-accent { stroke-width: 3; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-timeline-ui] .tl-time { font-weight: 600; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-timeline-ui] .tl-time.t-frontend { fill: var(--frontend-text); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-timeline-ui] .tl-time.t-backend { fill: var(--backend-text); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-timeline-ui] .tl-time.t-database { fill: var(--database-text); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-timeline-ui] .tl-time.t-cloud { fill: var(--cloud-text); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-timeline-ui] .tl-time.t-security { fill: var(--security-text); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-timeline-ui] .tl-time.t-messagebus { fill: var(--messagebus-text); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-timeline-ui] .tl-time.t-external { fill: var(--external-text); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-timeline-ui] [data-node-id] > text[data-node-label] { font-weight: 600; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-timeline-ui] :is(.tl-hatch, .tl-break-zig) { stroke: var(--lane-stroke); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-timeline-ui] .tl-break-zig { stroke-width: 1.25; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-timeline-ui] .tl-break-chip { fill: var(--mask); stroke: var(--lane-stroke); stroke-width: 1; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-timeline-ui] [data-timeline-break] > text { font-weight: 600; }
+
+/* evidence chip above timeline and waterfall: wash fill, soft border, text shade */
+html[data-fork-style][data-preset="classic"] .diagram-container svg :is([data-timeline-evidence], [data-waterfall-evidence]) > rect { stroke-width: 1; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg :is([data-timeline-evidence], [data-waterfall-evidence]) > text { font-weight: 600; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg :is([data-timeline-evidence], [data-waterfall-evidence]) > rect.c-messagebus { fill: var(--messagebus-wash); stroke: var(--messagebus-soft); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg :is([data-timeline-evidence], [data-waterfall-evidence]) > text.t-messagebus { fill: var(--messagebus-text); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg :is([data-timeline-evidence], [data-waterfall-evidence]) > rect.c-backend { fill: var(--backend-wash); stroke: var(--backend-soft); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg :is([data-timeline-evidence], [data-waterfall-evidence]) > text.t-backend { fill: var(--backend-text); }
+
+/* waterfall (§4.8) */
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-waterfall-ui] .wf-axis { stroke: var(--text-dim); stroke-width: 1; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-waterfall-ui] .wf-grid { stroke: var(--lane-stroke); stroke-width: 1; stroke-dasharray: 2 4; opacity: 1; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-waterfall-ui] .wf-grid-origin { stroke-dasharray: none; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-waterfall-ui] .wf-guide { stroke: var(--lane-stroke); stroke-width: 1; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-waterfall-ui] [data-node-id] > rect.wf-row { rx: 3px; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-waterfall-ui] [data-node-id] > rect.wf-row-alt { fill: var(--lane-fill); opacity: 1; }
+/* "Operation" is a fixed viewer word, not author text, so it takes the caps label style */
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-waterfall-ui] .wf-caps { fill: var(--text-dim); font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-waterfall-ui] [data-waterfall-total] { font-weight: 600; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-waterfall-ui] [data-waterfall-total] > tspan { font-weight: 400; }
+/* a span with children carries a t-primary duration; leaf spans read quieter */
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-waterfall-ui] [data-waterfall-depth] > text[data-node-label] { fill: var(--text); font-weight: 600; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-waterfall-ui] [data-waterfall-depth]:not([data-waterfall-depth="0"]):has(> text.wf-num.t-muted) > text[data-node-label] { fill: var(--text-muted); font-weight: 400; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-waterfall-ui] [data-waterfall-depth] > text.wf-num.t-primary { fill: var(--text); font-weight: 600; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-waterfall-ui] [data-waterfall-depth] > text.wf-num.t-muted { fill: var(--text-muted); font-weight: 400; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-waterfall-ui] .wf-dot { r: 3px; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-waterfall-ui] rect:is(.wf-solid, .wf-span, .wf-open) { rx: 3px; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-waterfall-ui] rect.wf-span { fill-opacity: 1; stroke-width: 1.25; }
+/* only a failure is red: error bars take the security line colour, cancelled bars a neutral outlined bar */
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-waterfall-ui] :is([data-waterfall-status="error"], [data-legend-semantic-kind="error"]) > rect.wf-solid { fill: var(--arrow-security); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-waterfall-ui] [data-waterfall-status="error"] > .wf-dot { fill: var(--arrow-security); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-waterfall-ui] :is([data-waterfall-status="cancelled"], [data-legend-semantic-kind="cancelled"]) > rect.wf-solid { fill: var(--external-fill); stroke: var(--external-stroke); stroke-width: 1.25; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-waterfall-ui] rect.wf-open { fill: var(--mask); fill-opacity: 1; stroke-width: 1.25; stroke-dasharray: 4 4; }
+/* the renderer draws an open-ended outline and a chevron past the end, so the bar's own closed border steps aside */
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-waterfall-ui] [data-node-id]:has(> .wf-open-outline) > rect.wf-open { stroke: none; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-waterfall-ui] .wf-open-edge { stroke-width: 1.25; stroke-dasharray: none; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-waterfall-ui] .wf-open-outline { stroke-dasharray: 4 4; stroke-linecap: butt; }
+
+/* replay fill (§5.3): each bar fills with its own final paint */
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-waterfall-ui] .ambient-flow-fill { rx: 3px; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-waterfall-ui] [data-waterfall-status="error"] > .ambient-flow-fill { fill: var(--arrow-security); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-waterfall-ui] [data-waterfall-status="cancelled"] > .ambient-flow-fill { fill: var(--external-fill); stroke: var(--external-stroke); stroke-width: 1.25; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-waterfall-ui] rect.wf-span.c-frontend + .ambient-flow-fill { fill: var(--frontend-fill); stroke: var(--frontend-stroke); stroke-width: 1.25; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-waterfall-ui] rect.wf-span.c-backend + .ambient-flow-fill { fill: var(--backend-fill); stroke: var(--backend-stroke); stroke-width: 1.25; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-waterfall-ui] rect.wf-span.c-database + .ambient-flow-fill { fill: var(--database-fill); stroke: var(--database-stroke); stroke-width: 1.25; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-waterfall-ui] rect.wf-span.c-cloud + .ambient-flow-fill { fill: var(--cloud-fill); stroke: var(--cloud-stroke); stroke-width: 1.25; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-waterfall-ui] rect.wf-span.c-messagebus + .ambient-flow-fill { fill: var(--messagebus-fill); stroke: var(--messagebus-stroke); stroke-width: 1.25; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-waterfall-ui] rect.wf-span.c-external + .ambient-flow-fill { fill: var(--external-fill); stroke: var(--external-stroke); stroke-width: 1.25; }
+
+/* highlight states (design §6): lights in --signal, persistent states as an ink ring, related lines keep their colour and gain 1, everything else 0.2 */
+
+/* related lines gain 1 (see the line kinds above) */
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-intent-trace-active] [data-edge-from][data-intent-trace-match],
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-focus-active] [data-edge-from][data-focus-match],
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-relationship-preview-active] [data-edge-from][data-relationship-preview],
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-reach-active] [data-edge-from][data-reach-match],
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-route-active] [data-edge-from][data-route-match],
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-lens-active] [data-edge-from][data-lens-match] { --fork-trace-add: 1px; }
+
+/* no halo around lines or nodes: the moving light and the ring carry every state */
+html[data-fork-style][data-preset="classic"] .diagram-container svg [data-node-id]:is(:hover, :focus-visible),
+html[data-fork-style][data-preset="classic"] .diagram-container svg [data-focus-selected],
+html[data-fork-style][data-preset="classic"] .diagram-container svg [data-lens-selected],
+html[data-fork-style][data-preset="classic"] .diagram-container svg [data-reach-origin],
+html[data-fork-style][data-preset="classic"] .diagram-container svg [data-edge-from][data-reach-match],
+html[data-fork-style][data-preset="classic"] .diagram-container svg [data-route-start],
+html[data-fork-style][data-preset="classic"] .diagram-container svg [data-route-end],
+html[data-fork-style][data-preset="classic"] .diagram-container svg [data-route-step],
+html[data-fork-style][data-preset="classic"] .diagram-container svg [data-edge-from][data-route-journey-current],
+html[data-fork-style][data-preset="classic"] .diagram-container svg [data-relationship-preview],
+html[data-fork-style][data-preset="classic"] .diagram-container svg [data-relationship-preview-source],
+html[data-fork-style][data-preset="classic"] .diagram-container svg [data-relationship-preview-target] { filter: none; }
+
+/* ink ring on the card itself; chromium follows border-radius plus the offset, so the ring's radius is the card's + 3 */
+html[data-fork-style][data-preset="classic"] .diagram-container svg :is([data-node-id]:focus-visible, [data-focus-selected], [data-route-picking] [data-route-start], [data-route-active] [data-route-start], [data-route-active] [data-route-end], [data-reach-active] [data-reach-origin]) > rect[data-animate] {
+  /* chromium floors outline widths to whole px, so 2 is the nearest to the 1.75 ring */
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+html[data-fork-style][data-preset="classic"] .diagram-container svg :is(.er-table, .cl-type)[data-animate] { border-radius: 8px; }
+
+/* a node glows in --signal only where a light reaches it */
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-intent-trace-active] [data-intent-trace-selected],
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-legend-preview-active] [data-legend-preview-selected],
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-route-journey] [data-node-id][data-route-journey-current]:not([data-route-start]) {
+  filter: drop-shadow(0 0 12px var(--arrive-glow));
+}
+@keyframes fork-arrive-glow {
+  0% { filter: drop-shadow(0 0 0 transparent); }
+  11%, 41% { filter: drop-shadow(0 0 12px var(--arrive-glow)); }
+  100% { filter: drop-shadow(0 0 0 transparent); }
+}
+/* rise 150ms, hold 400ms, fade 800ms (§5.2), timed to the light's arrival */
+html[data-fork-style][data-preset="classic"]:not([data-motion="still"]) .diagram-container svg[data-route-active]:not([data-route-journey]) [data-route-step]:not([data-route-start]):not([data-route-end]) {
+  animation: fork-arrive-glow calc(1.35s * var(--motion-tempo, 1)) linear 1 both;
+  animation-delay: calc((var(--route-step, 1) - 1) * 0.16s + 0.42s * var(--motion-tempo, 1));
+}
+html[data-fork-style][data-preset="classic"]:not([data-motion="still"]) .diagram-container svg[data-relationship-preview-active] [data-relationship-preview-target] {
+  animation: fork-arrive-glow calc(1.35s * var(--motion-tempo, 1)) linear 1 both;
+  animation-delay: calc(1s * var(--motion-tempo, 1));
+}
+
+/* four opacity steps: 1 related, 0.6 companion or passed, 0.35 not yet reached, 0.2 unrelated */
+html[data-fork-style][data-preset="classic"] .diagram-container svg:is([data-legend-preview-active], [data-lens-active], [data-focus-active], [data-reach-active], [data-relationship-direct-active], [data-route-active]) :is([data-node-id], [data-edge-from]),
+html[data-fork-style][data-preset="classic"] .diagram-container svg:is([data-legend-preview-active], [data-lens-active], [data-focus-active], [data-reach-active], [data-relationship-direct-active], [data-route-active]) [data-graph-role="automatic-crossover"] > [data-graph-role="automatic-crossover-underlay"],
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-route-picking="target"] [data-node-id] { opacity: 0.2; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-legend-preview-active] [data-legend-preview-match],
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-lens-active] [data-lens-match],
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-focus-active] [data-focus-match],
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-reach-active] [data-reach-match],
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-relationship-direct-active] :is([data-relationship-preview], [data-relationship-preview-node]),
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-route-active] [data-route-match],
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-route-picking="target"] :is([data-route-candidate], [data-route-start]),
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-route-journey] [data-route-match][data-route-journey-state="current"],
+html[data-fork-style][data-preset="classic"] .diagram-container svg:is([data-legend-preview-active] [data-graph-role="automatic-crossover"]:has(> [data-legend-preview-match]), [data-lens-active] [data-graph-role="automatic-crossover"]:has(> [data-lens-match]), [data-focus-active] [data-graph-role="automatic-crossover"]:has(> [data-focus-match]), [data-reach-active] [data-graph-role="automatic-crossover"]:has(> [data-reach-match]), [data-route-active] [data-graph-role="automatic-crossover"]:has(> [data-route-match])) > [data-graph-role="automatic-crossover-underlay"] { opacity: 1; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-legend-preview-active] [data-legend-preview-peer],
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-lens-active] [data-lens-peer],
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-lens-active] [data-edge-from][data-lens-reverse],
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-route-journey] [data-route-match][data-route-journey-state="past"],
+html[data-fork-style][data-preset="classic"] .diagram-container svg:is([data-legend-preview-active] [data-graph-role="automatic-crossover"]:has(> [data-legend-preview-peer]), [data-lens-active] [data-graph-role="automatic-crossover"]:has(> [data-lens-peer]), [data-route-journey] [data-graph-role="automatic-crossover"]:has(> [data-route-match][data-route-journey-state="past"])) > [data-graph-role="automatic-crossover-underlay"] { opacity: 0.6; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-route-journey] [data-route-match][data-route-journey-state="future"],
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-route-journey] [data-graph-role="automatic-crossover"]:has(> [data-route-match][data-route-journey-state="future"]) > [data-graph-role="automatic-crossover-underlay"] { opacity: 0.35; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-relationship-preview-active] [data-focus-match],
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-relationship-preview-active] [data-graph-role="automatic-crossover"]:has(> [data-focus-match]) > [data-graph-role="automatic-crossover-underlay"] { opacity: 0.2; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-relationship-preview-active] :is([data-relationship-preview], [data-relationship-preview-node]) { opacity: 1; }
+/* reach and a line preview sit on top of a click focus: only their own matches stay lit and widened */
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-reach-active] :is([data-node-id], [data-edge-from]):not([data-reach-match]),
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-reach-active] [data-graph-role="automatic-crossover"]:not(:has(> [data-reach-match])) > [data-graph-role="automatic-crossover-underlay"] { opacity: 0.2; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-reach-active] [data-edge-from]:not([data-reach-match]),
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-relationship-preview-active] [data-edge-from]:not([data-relationship-preview]) { --fork-trace-add: 0px; }
+/* a keyboard-selected line dims nothing; only pointer hover on a line fades the rest */
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-relationship-direct-active]:has(.relationship-hit-target:focus-visible) :is([data-node-id], [data-edge-from]),
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-relationship-direct-active]:has(.relationship-hit-target:focus-visible) [data-graph-role="automatic-crossover"] > [data-graph-role="automatic-crossover-underlay"] { opacity: 1; }
+
+/* one light colour, no direction colours; the head stays 1.25 wider than a widened line */
+html[data-fork-style][data-preset="classic"] .diagram-container svg :is(.intent-trace-flow, .relationship-flow-pulse, .semantic-lens-flow, .route-probe-flow, .route-journey-flow) {
+  stroke: var(--signal-head);
+  stroke-width: 3.5;
+  filter: drop-shadow(0 0 3px var(--signal));
+}
+/* upstream's probe ends by tinting the whole route; here the route keeps its line colours */
+@keyframes fork-route-probe-flow {
+  0% { stroke-dashoffset: 0; opacity: 0.96; }
+  78% { stroke-dasharray: 0.085 1; stroke-dashoffset: -1; opacity: 0.96; }
+  100% { stroke-dasharray: 0.085 1; stroke-dashoffset: -1; opacity: 0; }
+}
+html[data-fork-style][data-preset="classic"] .diagram-container svg .route-probe-flow { animation-name: fork-route-probe-flow; }
+/* the semantic token rides the same edge as the light; one light per line */
+html[data-fork-style][data-preset="classic"] .diagram-container svg .semantic-flow-token { display: none; }
+/* still parks every light; the widened line already marks the path, so upstream's static full-length copy would only tint it */
+html[data-fork-style][data-preset="classic"][data-motion="still"] .diagram-container svg :is(.intent-trace-flow, .route-probe-flow) { display: none; }
+
+/* keyboard rail on a line */
+html[data-fork-style][data-preset="classic"] .diagram-container svg .relationship-focus-rail { stroke: color-mix(in srgb, var(--signal) 35%, transparent); stroke-width: 6; stroke-dasharray: 2 4; filter: none; }
+/* the rail copies data-er-ends, so the erd legend's row dimming would otherwise reveal every rail */
+html[data-fork-style][data-preset="classic"] .diagram-container svg .relationship-hit-overlay .relationship-focus-rail { opacity: 0; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .relationship-hit-overlay .relationship-hit-target:focus-visible .relationship-focus-rail { opacity: 1; }
+
+/* route step numbers and the reach mode tag (drawn by route-probe.js and focus.js in fork style) */
+html[data-fork-style][data-preset="classic"] .diagram-container svg :is(.fork-route-step, .fork-reach-tag) { pointer-events: none; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg :is(.fork-route-step, .fork-reach-tag) > :is(circle, rect) { fill: var(--focus-ring); stroke: none; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg :is(.fork-route-step, .fork-reach-tag) > text { fill: var(--mask); font-size: 8px; font-weight: 700; text-anchor: middle; dominant-baseline: central; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-route-journey] .fork-route-step[data-route-journey-state="past"] { opacity: 0.6; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg[data-route-journey] .fork-route-step[data-route-journey-state="future"] { opacity: 0.35; }
+
+/* legend items: hover border, ink ring on Tab, ink border and chip fill when selected */
+html[data-fork-style][data-preset="classic"] .diagram-container svg [data-legend-kind][role="button"]:hover [data-legend-hit] { stroke: var(--text-muted); stroke-width: 1; filter: none; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg [data-legend-kind][role="button"]:focus-visible [data-legend-hit] { stroke: var(--focus-ring); stroke-width: 1.75; stroke-dasharray: none; filter: none; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg [data-legend-kind][data-legend-selected] [data-legend-hit] { fill: var(--chip-fill); stroke: var(--focus-ring); stroke-width: 1.75; stroke-dasharray: none; filter: none; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg [data-legend-kind][data-legend-selected] [data-legend-count-badge] rect { stroke: var(--focus-ring); stroke-width: 1; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg [data-legend-kind][data-legend-zero] { opacity: 0.45; }
+/* erd key legend: neutral hover and ink focus instead of violet */
+html[data-fork-style][data-preset="classic"] .diagram-container svg [data-legend-semantic-kind]:is(:hover, :focus-within) .er-legend-hit { fill: var(--chip-fill); }
+html[data-fork-style][data-preset="classic"] .diagram-container svg .er-legend-hit:focus-visible { stroke: var(--focus-ring); stroke-width: 1.75; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg [data-legend-semantic-kind]:is(:hover, :focus-within) .er-legend-glyph { stroke: var(--text) !important; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg:has([data-legend-semantic-kind="pk"]:is(:hover, :focus-within)) [data-er-row]:not(:has([data-er-badge="pk"])) { opacity: 0.2; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg:has([data-legend-semantic-kind="fk"]:is(:hover, :focus-within)) [data-er-row]:not(:has([data-er-badge="fk"])) { opacity: 0.2; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg:has([data-legend-semantic-kind="uk"]:is(:hover, :focus-within)) [data-er-row]:not(:has([data-er-badge="uk"])) { opacity: 0.2; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg:has([data-legend-semantic-kind="one"]:is(:hover, :focus-within)) [data-er-ends]:not([data-er-ends~="one"], .relationship-focus-rail) { opacity: 0.2; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg:has([data-legend-semantic-kind="one"]:is(:hover, :focus-within)) marker[id^="er-one"] { stroke: var(--arrow-emphasis) !important; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg:has([data-legend-semantic-kind="many"]:is(:hover, :focus-within)) [data-er-ends]:not([data-er-ends~="many"], .relationship-focus-rail) { opacity: 0.2; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg:has([data-legend-semantic-kind="many"]:is(:hover, :focus-within)) marker[id^="er-many"] { stroke: var(--arrow-emphasis) !important; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg:has([data-legend-semantic-kind="optional"]:is(:hover, :focus-within)) [data-er-ends]:not([data-er-ends~="optional"], .relationship-focus-rail) { opacity: 0.2; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg:has([data-legend-semantic-kind="optional"]:is(:hover, :focus-within)) marker[id*="-optional"] { stroke: var(--arrow-emphasis) !important; }
+/* fork style end */

@@ -79,14 +79,16 @@ async function loadArtifact(browser, artifactPath, { width = 1440, height = 900 
   return sessionId;
 }
 
-test('all typed renderers emit details-on-demand metadata and native SVG titles', () => {
+test('all typed renderers emit details-on-demand metadata without native SVG titles', () => {
   for (const [mode, example] of Object.entries(CASES)) {
     const html = render(mode, example);
     const diagram = svg(html);
     assert.match(diagram, /data-node-kind="[^"]+"/, mode);
     assert.match(diagram, /data-node-sublabel="[^"]+"/, mode);
     assert.match(diagram, /data-node-context="[^"]+"/, mode);
-    assert.match(diagram, /<g id="node-[^"]+"[\s\S]*?<title>[^<]+ · [^<]+<\/title>/, mode);
+    assert.match(diagram, /<g id="node-[^"]+"[^>]*aria-label="[^"]+"/, mode);
+    // a node <title> raises a native hover tooltip that covers the diagram
+    assert.doesNotMatch(diagram, /<g id="node-[^"]*"[^>]*>\s*<title>/, mode);
   }
 });
 

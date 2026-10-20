@@ -126,10 +126,58 @@
         upstreamBtn.setAttribute('aria-pressed', 'false');
         downstreamBtn.setAttribute('aria-pressed', 'false');
       }
+      // fork: an ink tag above the reach origin, worded like the passport's direction status
+      function renderForkReachTag(originId, text) {
+        removeForkReachTag();
+        var origin = nodes().find(function (node) { return node.getAttribute('data-node-id') === originId; });
+        var card = origin && origin.querySelector(':scope > rect[data-animate]');
+        if (!html.hasAttribute('data-fork-style') || !card) return;
+        // authored transforms only: the hover lift is a css transform and must not move the tag
+        var matrix = svg.createSVGMatrix();
+        for (var element = card; element && element !== svg; element = element.parentNode) {
+          var own = element.transform && element.transform.baseVal.consolidate();
+          if (own) matrix = own.matrix.multiply(matrix);
+        }
+        var box = card.getBBox();
+        var corner = svg.createSVGPoint();
+        corner.x = box.x;
+        corner.y = box.y;
+        var topLeft = corner.matrixTransform(matrix);
+        corner.x = box.x + box.width;
+        corner.y = box.y + box.height;
+        var bottomRight = corner.matrixTransform(matrix);
+        var tag = document.createElementNS(svgNamespace, 'g');
+        tag.setAttribute('class', 'fork-reach-tag');
+        tag.setAttribute('data-fork-overlay', '');
+        tag.setAttribute('aria-hidden', 'true');
+        var pill = document.createElementNS(svgNamespace, 'rect');
+        var words = document.createElementNS(svgNamespace, 'text');
+        words.textContent = text;
+        tag.appendChild(pill);
+        tag.appendChild(words);
+        svg.appendChild(tag);
+        var width = words.getComputedTextLength() + 12;
+        var height = 16;
+        var top = topLeft.y - 6 - height;
+        var view = svg.viewBox && svg.viewBox.baseVal;
+        if (view && view.height && top < view.y) top = bottomRight.y + 6;
+        var center = (topLeft.x + bottomRight.x) / 2;
+        pill.setAttribute('x', (center - width / 2).toFixed(2));
+        pill.setAttribute('y', top.toFixed(2));
+        pill.setAttribute('width', width.toFixed(2));
+        pill.setAttribute('height', String(height));
+        pill.setAttribute('rx', String(height / 2));
+        words.setAttribute('x', center.toFixed(2));
+        words.setAttribute('y', (top + height / 2).toFixed(2));
+      }
+      function removeForkReachTag() {
+        Array.prototype.forEach.call(svg.querySelectorAll('.fork-reach-tag'), function (tag) { tag.remove(); });
+      }
       function clearReachability(options) {
         options = options || {};
         reachabilityMode = null;
         activeReachability = null;
+        removeForkReachTag();
         svg.removeAttribute('data-reach-active');
         chip.removeAttribute('data-reach-mode');
         nodes().forEach(function (node) {
@@ -220,6 +268,7 @@
           hops: result.maxDepth
         });
         reachStatus.hidden = false;
+        renderForkReachTag(result.originId, directionLabel + ' · ' + reachableCount);
         if (Archify.exportMenu && typeof Archify.exportMenu.syncReachShare === 'function') {
           Archify.exportMenu.syncReachShare();
         }
@@ -419,7 +468,7 @@
       function relationshipEdgeShapes(edge) {
         if (!edge) return [];
         if (/^(path|line|polyline)$/i.test(edge.tagName || '')) return [edge];
-        return Array.prototype.slice.call(edge.querySelectorAll('path:not([data-ambient-flow-overlay]), line, polyline'));
+        return Archify.edgeGeometry(edge);
       }
       function relationshipHitRecords() {
         var recordsByKey = {};
@@ -657,12 +706,15 @@
         overlay.setAttribute('data-relationship-pulse-key', key);
         overlay.setAttribute('aria-hidden', 'true');
         var tokenAdded = false;
+        var lights = [];
         matchingEdges.forEach(function (edge) {
           var wrapper = document.createElementNS(svgNamespace, 'g');
           if (edge.hasAttribute('transform')) wrapper.setAttribute('transform', edge.getAttribute('transform'));
           var shapes = relationshipEdgeShapes(edge);
           shapes.forEach(function (shape) {
-            wrapper.appendChild(relationshipPulseGeometry(shape));
+            var light = relationshipPulseGeometry(shape);
+            lights.push([light, shape]);
+            wrapper.appendChild(light);
           });
           if (!tokenAdded && shapes.length) {
             var tokenKind = relationshipTokenKind(edge);
@@ -676,14 +728,17 @@
           if (wrapper.childNodes.length) overlay.appendChild(wrapper);
         });
         if (!overlay.childNodes.length) return false;
+        var copies = [];
         var finishPulse = function () {
           if (overlay.parentNode) overlay.remove();
+          copies.forEach(function (copy) { copy.remove(); });
         };
         overlay.addEventListener('animationend', finishPulse, { once: true });
         overlay.addEventListener('animationcancel', finishPulse, { once: true });
         var firstNode = svg.querySelector('[data-node-id]');
         if (firstNode) svg.insertBefore(overlay, firstNode);
         else svg.appendChild(overlay);
+        copies = Archify.labelLights(svg, overlay, lights, { contrast: true });
         return true;
       }
       function clearRelationshipPreview(options) {

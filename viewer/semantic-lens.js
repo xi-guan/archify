@@ -61,7 +61,7 @@
       function edgeShapes(edge) {
         if (!edge) return [];
         if (/^(path|line|polyline)$/i.test(edge.tagName || '')) return [edge];
-        return Array.prototype.slice.call(edge.querySelectorAll('path:not([data-ambient-flow-overlay]), line, polyline'));
+        return Archify.edgeGeometry(edge);
       }
       function legendSourceBounds(entry) {
         var bounds = null;
@@ -270,13 +270,16 @@
         overlay.setAttribute('class', 'semantic-lens-overlay');
         overlay.setAttribute('data-semantic-lens-overlay', '');
         overlay.setAttribute('aria-hidden', 'true');
+        var lights = [];
         entries.forEach(function (entry, step) {
           var wrapper = document.createElementNS(namespace, 'g');
           if (entry.edge.members[0].hasAttribute('transform')) {
             wrapper.setAttribute('transform', entry.edge.members[0].getAttribute('transform'));
           }
           edgeShapes(entry.edge.members[0]).forEach(function (shape) {
-            wrapper.appendChild(flowGeometry(shape, entry.direction, step));
+            var light = flowGeometry(shape, entry.direction, step);
+            lights.push([light, shape]);
+            wrapper.appendChild(light);
           });
           if (wrapper.childNodes.length) overlay.appendChild(wrapper);
         });
@@ -284,6 +287,7 @@
         var firstNode = svg.querySelector('[data-node-id]');
         if (firstNode) svg.insertBefore(overlay, firstNode);
         else svg.appendChild(overlay);
+        Archify.labelLights(svg, overlay, lights, { contrast: true });
         return true;
       }
       function cleanSvgState() {
@@ -293,6 +297,7 @@
           element.removeAttribute('data-lens-match');
           element.removeAttribute('data-lens-selected');
           element.removeAttribute('data-lens-peer');
+          element.removeAttribute('data-lens-reverse');
         });
       }
       function renderKinds() {
@@ -416,7 +421,11 @@
               : (toKind === selectedKinds[0] && fromKind !== selectedKinds[0] ? 'in' : 'within');
           }
           matchedFlow.push({ edge: edge, direction: direction });
-          edge.members.forEach(function (member) { member.setAttribute('data-lens-match', ''); });
+          edge.members.forEach(function (member) {
+            member.setAttribute('data-lens-match', '');
+            // fork: comparing two kinds, the way back reads at 0.6 instead of in a second colour
+            if (direction === 'reverse' && html.hasAttribute('data-fork-style')) member.setAttribute('data-lens-reverse', '');
+          });
           if (!crossKind) {
             [edge.from, edge.to].forEach(function (id) {
               if (!byId[id]) return;

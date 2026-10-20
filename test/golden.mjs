@@ -11,6 +11,9 @@ import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
+// fork: checked-in examples are rendered in upstream's look, see scripts/fork-regenerate.mjs
+process.env.ARCHIFY_FORK_STYLE ||= 'classic';
+
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const skillRoot = path.resolve(__dirname, '..', 'archify');
 const repoRoot = path.resolve(skillRoot, '..');

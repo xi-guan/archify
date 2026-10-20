@@ -10,6 +10,9 @@ import { testRunnerOptions } from './test-runner-options.mjs';
 
 import { browserTestFiles as testFiles } from './browser-test-inventory.mjs';
 
+// fork: upstream tests pin upstream's look; test/fork-style.test.mjs covers the default one
+process.env.ARCHIFY_FORK_STYLE ||= 'classic';
+
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
 let options;

@@ -59,12 +59,7 @@ export function nodeLabelLayout({ width, height, rows, side = 'left', brand = fa
   const right = width - (brand ? 26 : side === 'right' ? SEMANTIC_SIGIL_FOOTPRINT + 2 : 4)
     - (source ? SOURCE_BADGE_FOOTPRINT : 0);
   if (result.x - labelWidth / 2 >= left && result.x + labelWidth / 2 <= right) return result;
-  if (labelWidth <= right - left) {
-    // Round away from the icon, retaining the node centre whenever possible.
-    result.x = Math.min(Math.floor((right - labelWidth / 2) * 10) / 10,
-      Math.max(result.x, Math.ceil((left + labelWidth / 2) * 10) / 10));
-    return result;
-  }
+  // never shift sideways: an off-centre title misaligns with the centred sublabel and tag.
   // Keep the existing font sizes and put the text below the decoration rail.
   // Conservative ascent/descent bounds also protect CJK and fallback fonts.
   let bottom = Math.max(brand ? 22 : SEMANTIC_SIGIL_FOOTPRINT, source ? 19 : 0);
@@ -77,13 +72,12 @@ export function nodeLabelLayout({ width, height, rows, side = 'left', brand = fa
     result.ys = ys;
     return result;
   }
-  if (source) {
-    // A source badge adds a second decoration on the right. On short boxes,
-    // restoring the original rows would put the title back under that badge.
+  {
+    // fork: also without a source badge, since the title never shifts sideways to clear the icon.
     // Try compact leading before giving up the dedicated text rail. Retain
     // every font size and the authored box; only this crowded fallback packs
     // the rows, with a full em above each baseline and 0.3 em below it.
-    let compactBottom = Math.max(brand ? 22 : SEMANTIC_SIGIL_FOOTPRINT, 19) + 1;
+    let compactBottom = Math.max(brand ? 22 : SEMANTIC_SIGIL_FOOTPRINT, source ? 19 : 0) + 1;
     const compactYs = rows.map(row => {
       const y = Math.ceil((compactBottom + 1 + row.font) * 10) / 10;
       compactBottom = y + row.font * 0.3;

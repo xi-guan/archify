@@ -225,6 +225,31 @@
             edgeMatches.reduce(function (count, match) { return count + match.elements.length; }, 0);
       }
 
+      // fork: a standalone svg cannot match fork.css's html[data-fork-style] .diagram-container svg scope, so element rules move onto the svg root; token blocks carry no html and pass as is
+      function forkExportRule(rule) {
+        var sel = rule.selectorText;
+        if (/^\s*\[data-fork-style\]/.test(sel)) return rule.cssText;
+        var parts = [];
+        var depth = 0;
+        var start = 0;
+        for (var i = 0; i <= sel.length; i++) {
+          var ch = sel.charAt(i);
+          if (ch === '(') depth++;
+          else if (ch === ')') depth--;
+          else if (i === sel.length || (ch === ',' && depth === 0)) {
+            var match = /^\s*html((?:\[[^\]]*\])*)\s+\.diagram-container\s*>?\s*svg(?![\w-])(.*)$/.exec(sel.slice(start, i));
+            start = i + 1;
+            if (!match) continue;
+            // a bare [data-theme] only adds weight in the viewer; the svg carries data-theme only in light/dark exports
+            var attrs = match[1].replace(/\[data-theme\]/g, '');
+            try { if (!document.documentElement.matches('html' + attrs.replace(/\[data-theme=[^\]]*\]/g, ''))) continue; } catch (_) { continue; }
+            // the repeated [data-fork-style] stands in for the dropped .diagram-container class, so the rule still outweighs the svg's own style blocks
+            parts.push('svg[data-fork-style]' + attrs + match[2]);
+          }
+        }
+        return parts.length ? parts.join(', ') + ' { ' + rule.style.cssText + ' }' : '';
+      }
+
       function serializeSvg(scale, opts) {
         // scale: multiplier (integer unless the figure is oversized) for intrinsic SVG pixel dimensions used by
         // the raster path. Defaults to 1 (natural size) for SVG download.
@@ -260,6 +285,8 @@
         clone.style.height = vb.height * scale + 'px';
         clone.style.minWidth = '0';
         clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+        var forkStyle = document.documentElement.hasAttribute('data-fork-style');
+        if (forkStyle) clone.setAttribute('data-fork-style', '');
 
         // Only the SVG-relevant rules: semantic classes, markers, and the
         // theme variable blocks. Toolbar/cards/print CSS can never apply
@@ -277,6 +304,11 @@
               }
               if (rule.type !== 1) return; // plain style rules only
               var sel = rule.selectorText || '';
+              if (sel.indexOf('[data-fork-style]') !== -1) {
+                var forked = forkStyle && forkExportRule(rule);
+                if (forked) out.push(forked);
+                return;
+              }
               if (/(^|,)\s*(svg|:root|\[data-theme|\[data-preset|\.c-|\.t-|\.a-|\.m-)/.test(sel)) {
                 out.push(rule.cssText);
               } else if (opts.figure && sel.indexOf('.diagram-container > svg') !== -1) {
@@ -314,6 +346,7 @@
           var probe = document.createElement('div');
           probe.setAttribute('data-theme', themeAttr);
           probe.setAttribute('data-preset', document.documentElement.getAttribute('data-preset') || 'classic');
+          if (forkStyle) probe.setAttribute('data-fork-style', '');
           probe.style.cssText = 'position:absolute;width:0;height:0;visibility:hidden;';
           document.body.appendChild(probe);
           try {

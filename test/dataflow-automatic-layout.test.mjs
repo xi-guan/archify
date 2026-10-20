@@ -465,10 +465,10 @@ for (const [name, flow, expectedPoints, expectedHeight] of [
 // comparison is recorded in the PR evidence; SVG isolates renderer behavior
 // from unrelated future Viewer-template changes.
 for (const [name, mutate, expectedSha256] of [
-  ['standard-auto', diagram => { diagram.meta.quality_profile = 'standard'; }, '99637c1e91964415abeff668d89e7126ff12960d69d535a570f7a452b088f528'],
-  ['explicit-viewbox', diagram => { diagram.meta.viewBox = [1080, 720]; }, 'd738f4c38e336886aaf86bc769ea8b401e540da0f9566330b559408340968879'],
-  ['explicit-one-width', diagram => { diagram.nodes[0].width = 152; }, '0533eb9cfbd3a6a5bbd99c01342a3cf07429dc834fd2d446409eb35448a601ec'],
-  ['explicit-both', diagram => { diagram.meta.viewBox = [1080, 720]; diagram.nodes[0].width = 152; }, '0d2ee82e89eeb9e1c83e2002f72b004adfe876fb6d50dc91d465f8e778d3e8dd'],
+  ['standard-auto', diagram => { diagram.meta.quality_profile = 'standard'; }, 'f89f62583dfc56a88deed06d4abac032cf6cc16558c2ad4b35176c2f69275ee5'],
+  ['explicit-viewbox', diagram => { diagram.meta.viewBox = [1080, 720]; }, '345e44084d8c282a36acaa0e14c6c0bd0ebc5c3ab957416fb414a2e258b991b3'],
+  ['explicit-one-width', diagram => { diagram.nodes[0].width = 152; }, '0ed0bf2aa28a89599db7ecb550fd0dae22b935fe96ccb3f984e90f856d58ef66'],
+  ['explicit-both', diagram => { diagram.meta.viewBox = [1080, 720]; diagram.nodes[0].width = 152; }, '89fa2346fc9a981ac0135aadd8b6f16e8922b6f013515c50990b04afc39aaa6b'],
 ]) {
   test(`dev geometry compatibility outside default motion for ${name}`, t => {
     const diagram = smallFootprintDiagram({ id: 'f' });

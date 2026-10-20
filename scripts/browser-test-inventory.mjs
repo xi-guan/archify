@@ -22,6 +22,7 @@ export const browserTestFiles = [
   'motion-governor-browser.test.mjs',
   'finder-browser.test.mjs',
   'intent-trace-browser.test.mjs',
+  'hover-light-browser.test.mjs',
   'semantic-lens-browser.test.mjs',
   'reading-address-browser.test.mjs',
   'route-probe-browser.test.mjs',
@@ -43,4 +44,7 @@ export const browserTestFiles = [
   'sequence-segment-contrast-browser.test.mjs',
   'bottom-node-index-browser.test.mjs',
   'explainer-browser.test.mjs',
+  'header-dock-browser.test.mjs',
+  'fork-export-browser.test.mjs',
+  'fork-highlight-browser.test.mjs',
 ];

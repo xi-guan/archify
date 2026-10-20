@@ -425,6 +425,16 @@ test('nodeLabelLayout reserves the source badge footprint on the right rail', ()
   assert.ok(both.ys[0] >= 19 + 2);
 });
 
+test('nodeLabelLayout keeps a title that reaches the corner icon centred with a full-size icon', () => {
+  const rows = [{ text: 'tele-analytics', font: 10, y: 21 }, { text: '最新值和日汇总', font: 7, y: 37 }, { text: 'ClickHouse', font: 7, y: 47 }];
+  for (const width of [112, 120]) {
+    const layout = nodeLabelLayout({ width, height: 58, rows });
+    assert.equal(layout.x, width / 2);
+    assert.equal(layout.sigilSize, 11);
+    assert.ok(layout.ys[0] - 10 >= 17 && layout.ys[2] + 7 * 0.3 <= 58);
+  }
+});
+
 test('dense automatic exit notes pass public readability validation without losing authored content', () => {
   const fixture = path.join(__dirname, 'fixtures/lifecycle-dense-exit-notes.json');
   const bytes = fs.readFileSync(fixture, 'utf8');

@@ -1,11 +1,10 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { esc, renderDefinitions, textUnits } from '../shared/utils.mjs';
+import { esc, isClassicStyle, renderDefinitions, textUnits } from '../shared/utils.mjs';
 import {
   animateAttr,
   focusEdgeAttrs,
   focusNodeAttrs,
-  focusNodeTitle,
   loadDiagram,
   svgAccessibleText,
   svgRootAttrs,
@@ -311,6 +310,16 @@ function renderGuides() {
   }).join('\n');
 }
 
+// fork style: an incomplete bar has no right edge, and a line-style chevron just past the end says it keeps going
+function openBarTail(row, barY, midY) {
+  const fix = (value) => Math.round(value * 100) / 100;
+  const r = Math.min(3, row.width / 2);
+  const bottom = barY + layout.barH;
+  const outline = `M ${row.x1} ${barY} H ${fix(row.x0 + r)} A ${r} ${r} 0 0 0 ${row.x0} ${fix(barY + r)} V ${fix(bottom - r)} A ${r} ${r} 0 0 0 ${fix(row.x0 + r)} ${bottom} H ${row.x1}`;
+  return `<path d="${outline}" class="wf-open-edge wf-open-outline t-${row.tone}" stroke-width="1.25" fill="none"/>
+          <path d="M ${fix(row.x1 - 2.8)} ${midY - 4} L ${fix(row.x1 + 3)} ${midY} L ${fix(row.x1 - 2.8)} ${midY + 4}" class="wf-open-edge t-${row.tone}" stroke-width="1.25" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+}
+
 // A span with children is drawn as a tinted, outlined bracket over its time;
 // a span that does the work itself is a solid bar. Parent and child are never
 // added together, and the paint says which bars are inclusive summaries.
@@ -323,9 +332,8 @@ function renderRow(row, order) {
   const barY = midY - layout.barH / 2;
   const nameX = dotX(row) + 10;
   const paint = row.open ? 'wf-open' : row.parentBar ? 'wf-span' : 'wf-solid';
-  const openTail = row.open ? `<path d="M ${row.x1 - 8} ${barY + 2} L ${row.x1 - 2} ${midY} L ${row.x1 - 8} ${barY + layout.barH - 2}" class="wf-open-edge t-${row.tone}" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>` : '';
+  const openTail = !row.open ? '' : isClassicStyle() ? `<path d="M ${row.x1 - 8} ${barY + 2} L ${row.x1 - 2} ${midY} L ${row.x1 - 8} ${barY + layout.barH - 2}" class="wf-open-edge t-${row.tone}" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>` : openBarTail(row, barY, midY);
   return `        <g ${focusNodeAttrs(row.id, row.name, passport, locale)} data-waterfall-start="${row.start}" data-waterfall-end="${row.open ? '' : row.end}" data-waterfall-duration="${row.duration}" data-waterfall-depth="${row.depth}" data-waterfall-status="${row.status}"${service ? ` data-waterfall-service="${esc(service)}"` : ''}>
-          ${focusNodeTitle(row.name, passport)}
           <rect x="${layout.margin - 8}" y="${row.y + 1}" width="${width - layout.margin * 2 + 16}" height="${layout.rowH - 2}" rx="6" class="c-mask wf-row${order % 2 ? ' wf-row-alt' : ''}"/>
           <rect x="${row.x0}" y="${barY}" width="${row.width}" height="${layout.barH}" rx="${Math.min(4, row.width / 2)}" class="c-${row.tone} ${paint}"${animateAttr(wf.meta, 'node', order)} stroke-width="1.2"/>
           ${openTail}

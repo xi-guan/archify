@@ -1,7 +1,7 @@
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { esc, renderDefinitions, renderSemanticSigil, textUnits } from '../shared/utils.mjs';
-import { animateAttr, focusEdgeAttrs, focusNodeAttrs, focusNodeTitle, loadDiagramWithBrandMarks, writeDiagram, svgAccessibleText, svgRootAttrs } from '../shared/cli.mjs';
+import { esc, isClassicStyle, renderDefinitions, renderSemanticSigil, textUnits } from '../shared/utils.mjs';
+import { animateAttr, focusEdgeAttrs, focusNodeAttrs, loadDiagramWithBrandMarks, writeDiagram, svgAccessibleText, svgRootAttrs } from '../shared/cli.mjs';
 import { throwDiagnosticProblems } from '../shared/diagnostics.mjs';
 import { legendFootprint, measureLegend, resolveLegend, renderLegend as renderResolvedLegend } from '../shared/legend.mjs';
 import { componentFill, arrowClassMap, rectsOverlap, cleanFlowProblems, cleanCrossingProblems, cleanAmbiguousCorridorProblems, cleanBorderRunProblems, cleanRouteRhythmProblems, cleanLabelRouteClearanceProblems, cleanLabelCanvasContainmentProblems, routePointsValue, asArray, isFinitePoint, edgeLabelAccent } from '../shared/geometry.mjs';
@@ -371,6 +371,11 @@ function messageGeometry(message) {
   return { start, end, center: (start + end) / 2 };
 }
 
+// fork: the label background ends 4 above the line so it clears the 3.42 arrowhead wing under it
+function messageLabelTop(message) {
+  return message.y - (isClassicStyle() ? 20 : Math.max(20, layout.labelH + 4));
+}
+
 function messageLabelBox(message, relationIndex = null) {
   const geometry = messageGeometry(message);
   if (!geometry) return null;
@@ -380,7 +385,7 @@ function messageLabelBox(message, relationIndex = null) {
     relationIndex,
     label: message.label,
     x: geometry.center - width / 2,
-    y: message.y - 20,
+    y: messageLabelTop(message),
     width,
     height: layout.labelH,
   };
@@ -944,7 +949,6 @@ function renderParticipant(participant) {
     ...brandMetadataFor(participant),
   };
   return `        <g ${focusNodeAttrs(participant.id, participant.label, passport, sequence.meta.locale)}>
-          ${focusNodeTitle(participant.label, passport)}
           <rect x="${participant.x}" y="${layout.topY}" width="${layout.participantW}" height="${layout.participantH}" rx="6" class="c-mask"/>
           <rect x="${participant.x}" y="${layout.topY}" width="${layout.participantW}" height="${layout.participantH}" rx="6" class="${fill}"${animateAttr(sequence.meta, 'node', participant.index)} stroke-width="1.5"/>
           ${renderSemanticSigil(participant.type, { icon: participant.icon, x: participant.x + 6, y: layout.topY + 6 })}${brand ? `\n          ${brand}` : ''}
@@ -987,7 +991,7 @@ function renderActivation(activation) {
 function messageLabel(message, x1, x2) {
   const box = messageLabelBox(message);
   const center = box ? box.x + box.width / 2 : (x1 + x2) / 2;
-  const y = message.y - 10;
+  const y = messageLabelTop(message) + 10;
   const labelW = box?.width || Math.max(34, textUnits(message.label) * messageUnitWidth + 12);
   // A colored line gets a label in the same color, as in the legend swatches.
   // Gray lines (default and return) keep the readable muted text color.
@@ -1065,7 +1069,7 @@ function renderSvg() {
   const readerFit = sequence.meta?.viewBox ? '' : ' data-reader-fit="width-first"';
   return `      <svg viewBox="0 0 ${viewBox[0]} ${viewBox[1]}" data-sequence-column-fit="${columnFit}"${readerFit} ${svgRootAttrs(sequence.meta)} data-motion-choreography="sequence">
 ${svgAccessibleText(sequence.meta, 'sequence')}
-${renderDefinitions()}
+${renderDefinitions('', { fixedArrowheads: true })}
 
         <!-- Background Grid -->
         <rect width="100%" height="100%" fill="url(#grid)" />

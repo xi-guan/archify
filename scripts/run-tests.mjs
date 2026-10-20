@@ -7,6 +7,9 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { testRunnerOptions } from './test-runner-options.mjs';
 
+// fork: upstream tests pin upstream's look; test/fork-style.test.mjs covers the default one
+process.env.ARCHIFY_FORK_STYLE ||= 'classic';
+
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const testRoot = path.join(repoRoot, 'test');
 const testFiles = fs.readdirSync(testRoot)

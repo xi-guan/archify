@@ -13,6 +13,8 @@ const defaultRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '
 // markers are already at column 0; the standalone CSS file needs four spaces.
 const fragments = [
   ['/* ARCHIFY:VIEWER_CSS */', 'viewer.css', 4],
+  // fork: optional so upstream's synthetic-shell tests still assemble; test/fork-style.test.mjs checks the real template has it
+  ['/* ARCHIFY:FORK_CSS */', 'fork.css', 4, true],
   ['/* ARCHIFY:EXPORT */', 'export.js'],
   ['/* ARCHIFY:READER_LAYOUT */', 'reader-layout.js'],
   ['/* ARCHIFY:CHROME_LAYOUT */', 'viewer-chrome-layout.js'],
@@ -43,7 +45,8 @@ function reindent(source, spaces) {
 export function generateViewer({ root = defaultRoot, check = false } = {}) {
   const output = path.join(root, 'archify/assets/template.html');
   let generated = fs.readFileSync(path.join(root, 'viewer/template.source.html'), 'utf8');
-  for (const [marker, file, indent = 0] of fragments) {
+  for (const [marker, file, indent = 0, optional = false] of fragments) {
+    if (optional && !generated.includes(marker)) continue;
     const source = fs.readFileSync(path.join(root, 'viewer', file), 'utf8');
     const parts = generated.split(marker);
     if (parts.length !== 2) throw new Error(`Viewer source must contain exactly one ${file} marker.`);

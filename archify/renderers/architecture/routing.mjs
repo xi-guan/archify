@@ -87,6 +87,7 @@ export function createRouter(components, connections = [], {
   componentGapPx = 0,
   minimumTerminalSegmentPx = 0,
   readabilityBottomMargin = 0,
+  cornerRadius = 8,
 } = {}) {
   const frameBorders = frames.flatMap((frame) => frameBorderSegments(frame));
   const LABEL_CLEARANCE = 4;
@@ -881,7 +882,7 @@ export function createRouter(components, connections = [], {
     const points = hasAuthoredRouteGeometry(conn)
       ? authoredPoints
       : normalizeRoutePoints(authoredPoints);
-    return { d: roundedPath(points, 8), points };
+    return { d: roundedPath(points, cornerRadius), points };
   }
 
   function cachePath(conn, routed, sides) {
@@ -1130,7 +1131,7 @@ export function createRouter(components, connections = [], {
               const end = [...geometry.end];
               start[axis] = lane;
               end[axis] = lane;
-              return { points: [start, end], d: roundedPath([start, end], 8) };
+              return { points: [start, end], d: roundedPath([start, end], cornerRadius) };
             };
             const pairSides = (candidate) => (candidate === conn ? firstSides
               : candidate === second.conn ? secondSides : selectedSides.get(candidate));
@@ -1318,7 +1319,7 @@ export function createRouter(components, connections = [], {
             const points = [[...start], [...end]];
             points[0][axis] = lane;
             points[1][axis] = lane;
-            const routed = { conn, points, d: roundedPath(points, 8) };
+            const routed = { conn, points, d: roundedPath(points, cornerRadius) };
             if (!points.every(withinScene)
                 || !endpointSlotsClear([routed], others, sidesOf)
                 || !routeIsClear(conn, routed, geometry, others)
@@ -1412,7 +1413,7 @@ export function createRouter(components, connections = [], {
               for (const end of slots(geometry.to, sides.toSide, geometry.end)) {
                 const corner = horizontal(sides.fromSide) ? [end[0], start[1]] : [start[0], end[1]];
                 const points = normalizeRoutePoints([start, corner, end]);
-                const routed = { points, d: roundedPath(points, 8) };
+                const routed = { points, d: roundedPath(points, cornerRadius) };
                 const cost = readabilityCost(conn, routed, others);
                 if (cost >= bestCost || points.length !== 3 || !points.every(withinScene)
                     || !endpointSlotsClear([{ conn, points }], others,

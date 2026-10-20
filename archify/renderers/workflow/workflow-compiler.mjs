@@ -1,13 +1,12 @@
 import { proposeWorkflowPlacement } from './workflow-placement-repair.mjs';
 import { createSpatialGrid } from '../shared/spatial-grid.mjs';
 import { shortestOrthogonalGridRoute } from '../shared/route-quality.mjs';
-import { esc, renderDefinitions, renderSemanticSigil, textUnits } from '../shared/utils.mjs';
+import { esc, isClassicStyle, renderDefinitions, renderSemanticSigil, SOURCE_BADGE_FOOTPRINT, textUnits } from '../shared/utils.mjs';
 import { NODE_CARD_ATTR, nodeCardStyle } from '../shared/node-card-style.mjs';
 import {
   animateAttr,
   focusEdgeAttrs,
   focusNodeAttrs,
-  focusNodeTitle,
   svgAccessibleText,
   svgRootAttrs,
   validateCrossCollectionContracts,
@@ -96,12 +95,27 @@ const READABLE_CANDIDATE_COST_PRIORITY = Object.freeze([
   'stableCandidateOrdinal',
 ]);
 const MAX_READABLE_LAYOUT_FEEDBACK_ROUNDS = 3;
+// read once at import: the layout constants below depend on it
+const CLASSIC_WORKFLOW_STYLE = isClassicStyle();
 const GROUP_FRAME_TOP_INSET = 8;
-const GROUP_FRAME_BOTTOM_INSET = 4;
+// equal top and bottom insets keep mid-lane nodes centered inside their group frame
+const GROUP_FRAME_BOTTOM_INSET = CLASSIC_WORKFLOW_STYLE ? 4 : 8;
 const GROUP_LABEL_BASELINE_OFFSET = -2;
 const GROUP_LABEL_MASK_ASCENT = 10;
 const GROUP_LABEL_MASK_H = 14;
-const GROUP_NODE_INSET = 4;
+// room a group frame leaves around its nodes, so an arrowhead entering from outside clears the frame line
+const GROUP_NODE_INSET = CLASSIC_WORKFLOW_STYLE ? 4 : 10;
+const LANE_TITLE_V1 = Object.freeze({ band: 30, x: 14, baseline: 22, fontSize: 10, charWidth: 6.2, height: 14 });
+// readable-v2 lane names sit small in the lane's top-left corner, so their title band stays short
+const READABLE_LANE_TITLE = CLASSIC_WORKFLOW_STYLE
+  ? LANE_TITLE_V1
+  : Object.freeze({ band: 22, x: 10, baseline: 15, fontSize: 8, charWidth: 4.96, height: 12 });
+// a channel under the nodes sits mid-way down the lane's foot band, its label centered on the line
+const READABLE_BOTTOM_CHANNEL_DROP = CLASSIC_WORKFLOW_STYLE ? 32 : 17;
+// fork: the v2 legend baseline sits 64 below the last lane (upstream 44) so it reads apart from the diagram
+const READABLE_LEGEND_DROP = 64;
+// fork: edge labels at the design's 9px keep delivery's 6px projected floor on canvases up to 1395 wide (8px stops at 1240)
+const EDGE_LABEL_FONT = CLASSIC_WORKFLOW_STYLE ? 8 : 9;
 
 const HARD_ROUTE_RHYTHM = Object.freeze({ direct: 28, endpoint: 8, interior: 16 });
 
@@ -168,7 +182,30 @@ function usesIndependentLaneMeasurement(workflow) {
 // would not fit even at 6px also grows the node to fit it at its preferred 8px
 // or 7px. Keyed by the node object so the authored document is never rewritten.
 const automaticNodeWidths = new WeakMap();
+// fork v2 card: icon at left + 10, text column at left + 28, 12 px right padding; title and sublabel keep fixed sizes
+const TIDY_CARD = Object.freeze({ iconX: 10, iconY: 9, textX: 28, padRight: 12, title: 12, titleMinimum: 9, titleY: 19, sub: 9, subY: 32, subLine: 11 });
+function tidySublabelLines(text, room) {
+  const lines = [];
+  for (const word of String(text).split(/\s+/).filter(Boolean)) {
+    const joined = lines.length ? `${lines.at(-1)} ${word}` : word;
+    if (lines.length && minimumNodeTextWidth(joined, TIDY_CARD.sub) <= room) lines[lines.length - 1] = joined;
+    else lines.push(word);
+  }
+  return lines;
+}
+function tidyNodeWidth(node) {
+  const inset = TIDY_CARD.textX + TIDY_CARD.padRight;
+  let width = Math.max(92, Math.ceil((minimumNodeTextWidth(node.label, TIDY_CARD.title) + inset) / 4) * 4);
+  // the sublabel may wrap to two lines before it widens the card
+  while (width < 200 && node.sublabel && !tidySublabelFits(node.sublabel, width - inset)) width += 4;
+  return width > 92 ? Math.min(200, width) : null;
+}
+function tidySublabelFits(text, room) {
+  const lines = tidySublabelLines(text, room);
+  return lines.length <= 2 && lines.every((line) => minimumNodeTextWidth(line, TIDY_CARD.sub) <= room);
+}
 function automaticNodeWidth(node) {
+  if (!CLASSIC_WORKFLOW_STYLE) return tidyNodeWidth(node);
   const labelWidth = Math.max(92, Math.ceil((textUnits(node.label) * 6.8 - 6) / 4) * 4);
   const secondaryWidths = [[node.sublabel, 8], [node.tag, 7]]
     .filter(([text]) => text && minimumNodeTextWidth(text, 6) > availableNodeTextWidth(labelWidth))
@@ -187,11 +224,11 @@ function nodeWidthContributor(node) {
 
 function authoredNodeHeight(node) {
   if (Number.isFinite(node?.height)) return node.height;
-  return node?.tag ? 68 : 52;
+  return node?.tag && CLASSIC_WORKFLOW_STYLE ? 68 : 52;
 }
 
 function workflowLabelWidth(label) {
-  return Math.max(30, textUnits(label) * 4.8 + 10);
+  return Math.max(30, textUnits(label) * (EDGE_LABEL_FONT * 0.6) + 10);
 }
 
 function readableGroupBounds(workflow, group, colXs) {
@@ -448,7 +485,8 @@ function createReadableLayout(workflow, layoutFeedback = {}) {
     const prefix = lane.variant === 'exception'
       ? 'EX'
       : String(lanePosition + 1).padStart(2, '0');
-    const laneHeaderRight = 40 + 14 + textUnits(`${prefix} / ${lane.label}`) * 6.2;
+    const laneHeaderRight = 40 + READABLE_LANE_TITLE.x
+      + textUnits(`${prefix} / ${lane.label}`) * READABLE_LANE_TITLE.charWidth;
     const requiredShift = laneHeaderRight + 2 - colXs[node.col];
     if (requiredShift > laneHeaderShift + 0.0001) {
       laneHeaderShift = requiredShift;
@@ -531,7 +569,7 @@ function createReadableLayout(workflow, layoutFeedback = {}) {
     }
   }
   const widestLaneLabel = asArray(workflow.lanes).reduce((widest, lane, index) => {
-    const width = textUnits(`${String(index + 1).padStart(2, '0')} / ${lane.label}`) * 6.2 + 30;
+    const width = textUnits(`${String(index + 1).padStart(2, '0')} / ${lane.label}`) * READABLE_LANE_TITLE.charWidth + 30;
     return width > widest.width ? { width, lane } : widest;
   }, { width: 0, lane: null });
   const laneLabelWidth = widestLaneLabel.width;
@@ -568,18 +606,19 @@ function createReadableLayout(workflow, layoutFeedback = {}) {
     return { maximum, contributors };
   };
   const sharedVerticalExtent = verticalExtent();
-  const laneH = 30 + Math.max(74, Math.ceil(sharedVerticalExtent.maximum * 2 + 8));
+  const laneTitleH = READABLE_LANE_TITLE.band;
+  const laneH = laneTitleH + Math.max(74, Math.ceil(sharedVerticalExtent.maximum * 2 + 8));
   const independentLaneMeasurement = usesIndependentLaneMeasurement(workflow);
   const laneBaseHeights = asArray(workflow.lanes).map((lane) => {
     if (!independentLaneMeasurement) return laneH;
     const ownVerticalExtent = verticalExtent(lane.id);
-    const height = 30 + Math.max(74, Math.ceil(ownVerticalExtent.maximum * 2 + 8));
-    if (height > 104) {
+    const height = laneTitleH + Math.max(74, Math.ceil(ownVerticalExtent.maximum * 2 + 8));
+    if (height > laneTitleH + 74) {
       for (const contributor of ownVerticalExtent.contributors) heightContributors.add(contributor);
     }
     return height;
   });
-  if (!independentLaneMeasurement && laneH > 104) {
+  if (!independentLaneMeasurement && laneH > laneTitleH + 74) {
     for (const contributor of sharedVerticalExtent.contributors) heightContributors.add(contributor);
   }
   const groupsByLane = new Map();
@@ -587,7 +626,7 @@ function createReadableLayout(workflow, layoutFeedback = {}) {
     groupsByLane.set(group.lane, [...(groupsByLane.get(group.lane) || []), group]);
   }
   const groupLaneReserves = asArray(workflow.lanes).map((lane, laneIndex) => {
-    const baseContentH = laneBaseHeights[laneIndex] - 30;
+    const baseContentH = laneBaseHeights[laneIndex] - laneTitleH;
     let header = 0;
     let footer = 0;
     for (const group of groupsByLane.get(lane.id) || []) {
@@ -607,19 +646,27 @@ function createReadableLayout(workflow, layoutFeedback = {}) {
         const overlapsLabel = nodeRight > labelLeft && nodeLeft < labelRight;
         const topOffset = (baseContentH - authoredNodeHeight(node)) / 2
           + (Number(node.yOffset) || 0);
-        const minimumTopOffset = overlapsLabel ? 11 : 9;
+        // the fork pads the frame above and below its nodes as much as at the sides
+        const minimumTopOffset = CLASSIC_WORKFLOW_STYLE
+          ? (overlapsLabel ? 11 : 9)
+          : GROUP_FRAME_TOP_INSET + GROUP_NODE_INSET;
         header = Math.max(header, Math.ceil(minimumTopOffset - topOffset));
         const bottomMargin = baseContentH - GROUP_FRAME_BOTTOM_INSET
           - topOffset - authoredNodeHeight(node);
-        footer = Math.max(footer, Math.ceil(1 - bottomMargin));
+        footer = Math.max(footer, Math.ceil((CLASSIC_WORKFLOW_STYLE ? 1 : GROUP_NODE_INSET) - bottomMargin));
       }
     }
     return { header: Math.max(0, header), footer: Math.max(0, footer) };
   });
   const groupHeaderHeights = groupLaneReserves.map(({ header }) => header);
   const groupFooterHeights = groupLaneReserves.map(({ footer }) => footer);
+  // an empty band under the nodes, as tall as the title band, so nodes sit mid-lane; false opts out
+  const centeredLanes = CLASSIC_WORKFLOW_STYLE
+    ? workflow.meta?.centered_lanes === true
+    : workflow.meta?.centered_lanes !== false;
+  const laneFootH = centeredLanes ? laneTitleH : 0;
   const laneHeights = groupLaneReserves.map(({ header, footer }, index) => (
-    laneBaseHeights[index] + header + footer
+    laneBaseHeights[index] + header + footer + laneFootH
   ));
   const laneGap = Math.max(20, Math.ceil(layoutFeedback.laneGapMin || 0));
   for (const [index, reserve] of groupHeaderHeights.entries()) {
@@ -642,12 +689,14 @@ function createReadableLayout(workflow, layoutFeedback = {}) {
   return {
     contract: 'readable-v2',
     laneX: 40,
-    laneY: 52,
+    // phase headers own the band above the lanes; without them it shrinks to a margin
+    laneY: asArray(workflow.phases).length || CLASSIC_WORKFLOW_STYLE ? 52 : 28,
     laneW,
     laneH,
     laneHeights,
     laneGap,
-    laneTitleH: 30,
+    laneTitleH,
+    laneFootH,
     groupHeaderHeights,
     groupFooterHeights,
     colXs,
@@ -908,12 +957,14 @@ function resolveWorkflowLegendFootprint(workflow, layout) {
 // helpers every later phase reads. Lifted out of compileWorkflowInternal so the
 // body reads as phases instead of one script.
 function createWorkflowLaneGeometry(workflow, layout, legendExtraHeight, minimumCanvasWidth) {
+  const forkLegend = workflow.schema_version === 2 && !CLASSIC_WORKFLOW_STYLE;
   // Content is 680px wide (laneX + laneW); auto height fits the lanes plus legend.
   const autoHeight = layout.laneY
     + (layout.laneHeights?.reduce((total, height) => total + height, 0)
       ?? (workflow.lanes?.length || 1) * layout.laneH)
     + ((workflow.lanes?.length || 1) - 1) * layout.laneGap
-    + 124
+    // fork: 36 under the legend baseline matches the measured-bounds floor instead of upstream's spare room
+    + (forkLegend ? READABLE_LEGEND_DROP + 36 : 124)
     + legendExtraHeight;
   const initialViewBox = workflow.meta?.viewBox || [minimumCanvasWidth, autoHeight];
   
@@ -961,7 +1012,7 @@ function createWorkflowLaneGeometry(workflow, layout, legendExtraHeight, minimum
   }
 
   function legendY() {
-    return lastLaneBottom() + 44 + legendExtraHeight;
+    return lastLaneBottom() + (forkLegend ? READABLE_LEGEND_DROP : 44) + legendExtraHeight;
   }
 
   return {
@@ -983,12 +1034,13 @@ function createWorkflowLaneGeometry(workflow, layout, legendExtraHeight, minimum
 // phase reads. Kept together so the compiler body reads as phases.
 function measureWorkflowNodes(workflow, layout, laneGeometry) {
   const { laneHeight, laneGroupHeaderH, laneGroupFooterH, laneTop } = laneGeometry;
+  const tidyCard = workflow.schema_version === 2 && !CLASSIC_WORKFLOW_STYLE;
   function measureNode(node) {
     const width = node.width || (workflow.schema_version === 2 && automaticNodeWidths.get(node)) || layout.nodeW;
-    const height = node.height || (node.tag ? 68 : layout.nodeH);
+    const height = node.height || (node.tag && !tidyCard ? 68 : layout.nodeH);
     const cx = layout.colXs[node.col];
     const groupHeaderH = laneGroupHeaderH(node.lane);
-    const contentH = laneHeight(node.lane) - layout.laneTitleH
+    const contentH = laneHeight(node.lane) - layout.laneTitleH - (layout.laneFootH || 0)
       - groupHeaderH - laneGroupFooterH(node.lane);
     const y = laneTop(node.lane) + layout.laneTitleH + groupHeaderH
       + (contentH - height) / 2 + (node.yOffset || 0);
@@ -1005,12 +1057,14 @@ function measureWorkflowNodes(workflow, layout, laneGeometry) {
 
   // Font sizes for this renderer's node text; the fitting geometry is shared.
   const nodeTextFit = {
-    labelPreferred: 11,
+    labelPreferred: tidyCard ? TIDY_CARD.title : 11,
     labelMinimum: 9,
-    sublabelPreferred: 8,
+    sublabelPreferred: tidyCard ? TIDY_CARD.sub : 8,
     sublabelMinimum: 6,
     tagPreferred: 7,
     tagMinimum: 6,
+    // v2 cards leave the tag to the Passport and finder
+    tagInCard: !tidyCard,
   };
 
   const nodes = new Map(asArray(workflow.nodes).map((node) => [node.id, measureNode(node)]));
@@ -1029,7 +1083,7 @@ function workflowNodeTextProblems(node, nodeTextFit) {
   const availableTextW = availableNodeTextWidth(node.width);
   for (const [field, value, minimum] of [
     ['Sublabel', node.sublabel, nodeTextFit.sublabelMinimum],
-    ['Tag', node.tag, nodeTextFit.tagMinimum],
+    ['Tag', nodeTextFit.tagInCard ? node.tag : null, nodeTextFit.tagMinimum],
   ]) {
     if (!value) continue;
     const minimumW = minimumNodeTextWidth(value, minimum);
@@ -1504,7 +1558,7 @@ function workflowCompositionFrames() {
   for (const [index, lane] of asArray(workflow.lanes).entries()) {
     const y = laneTop(lane.id);
     const height = laneHeight(index);
-    frames.push({ id: `lane-${index}`, label: lane.label, kind: 'lane', x: layout.laneX, y, width: layout.laneW, height, radius: 10 });
+    frames.push({ id: `lane-${index}`, label: lane.label, kind: 'lane', x: layout.laneX, y, width: layout.laneW, height, radius: 8 });
     if (lane.variant === 'exception') {
       frames.push({ id: `lane-${index}-exception`, label: `${lane.label} exception`, kind: 'exception-lane', x: layout.laneX + 6, y: y + 6, width: layout.laneW - 12, height: height - 12, radius: 8 });
     }
@@ -1519,13 +1573,17 @@ function workflowCompositionFrames() {
       y: laneTop(group.lane) + layout.laneTitleH + GROUP_FRAME_TOP_INSET,
       width: span.width,
       height: workflow.schema_version === 2
-        ? laneHeight(group.lane) - layout.laneTitleH
+        ? laneHeight(group.lane) - layout.laneTitleH - (layout.laneFootH || 0)
           - GROUP_FRAME_TOP_INSET - GROUP_FRAME_BOTTOM_INSET
         : layout.laneH - layout.laneTitleH - 16,
-      radius: 9,
+      radius: 8,
     });
   }
   return frames;
+}
+
+function laneTitle() {
+  return workflow.schema_version === 2 ? READABLE_LANE_TITLE : LANE_TITLE_V1;
 }
 
 function workflowSceneLabelObstacles() {
@@ -1533,13 +1591,14 @@ function workflowSceneLabelObstacles() {
   for (const [index, lane] of asArray(workflow.lanes).entries()) {
     const prefix = lane.variant === 'exception' ? 'EX' : String(index + 1).padStart(2, '0');
     const label = `${prefix} / ${lane.label}`;
+    const title = laneTitle();
     obstacles.push({
       kind: 'lane-header',
       id: lane.id,
-      x: layout.laneX + 14,
-      y: laneTop(lane.id) + 12,
-      width: textUnits(label) * 6.2,
-      height: 14,
+      x: layout.laneX + title.x,
+      y: laneTop(lane.id) + title.baseline - 10,
+      width: textUnits(label) * title.charWidth,
+      height: title.height,
     });
   }
   for (const phase of asArray(workflow.phases)) {
@@ -2896,7 +2955,7 @@ function validateWorkflow() {
   }));
   if (workflow.schema_version === 2) {
     const routedRelations = workflow.edges.map((relation, relationIndex) => ({
-      relation: { ...relation, width: relation.width || (relation.variant === 'emphasis' ? 1.8 : 1.4) },
+      relation: { ...relation, width: relation.width || (relation.variant === 'emphasis' ? 1.3 : 1) },
       relationIndex, points: pathFor(relation).points,
     }));
     for (const hit of collectArrowheadCollisions({ routedRelations, allowShortWorkflowTrunks: true })) {
@@ -4225,7 +4284,7 @@ function readablePresetVia(edge, from, to, start, end, fromSide, toSide) {
       break;
     }
     case 'bottom-channel': {
-      const y = Math.max(from.y + from.height, to.y + to.height) + 32;
+      const y = Math.max(from.y + from.height, to.y + to.height) + READABLE_BOTTOM_CHANNEL_DROP;
       via = [[start[0], y], [end[0], y]];
       break;
     }
@@ -4337,7 +4396,8 @@ function routeVia(
       return [[x, start[1]], [x, end[1]]];
     }
     case 'bottom-channel': {
-      const y = edge.channelY ?? Math.max(from.y + from.height, to.y + to.height) + 32;
+      const y = edge.channelY ?? Math.max(from.y + from.height, to.y + to.height)
+        + (workflow.schema_version === 2 ? READABLE_BOTTOM_CHANNEL_DROP : 32);
       return [[start[0], y], [end[0], y]];
     }
     case 'up-channel': {
@@ -4397,8 +4457,16 @@ function workflowEdgeLabelPoint(edge, points) {
     return [x + labelSide * (workflowLabelWidth(edge.label) / 2 + 8),
       (points[0][1] + points[1][1]) / 2];
   }
+  const from = nodes.get(edge.from);
+  const to = nodes.get(edge.to);
+  const channelFloor = from && to ? Math.max(from.y + from.height, to.y + to.height) : Infinity;
   if (edge.labelAt || Number.isInteger(edge.labelSegment) || points.length <= 2) {
-    return labelPoint(edge, points);
+    const point = labelPoint(edge, points);
+    const index = Math.min(points.length - 2, Math.max(0, edge.labelSegment ?? 1));
+    // an authored segment in a shallow channel masks the line the same way an automatic one does
+    if (!CLASSIC_WORKFLOW_STYLE && !edge.labelAt && edge.labelDy === undefined && points.length > 2
+      && points[index][1] === points[index + 1][1] && points[index][1] > channelFloor) point[1] += 13;
+    return point;
   }
   const segments = points.slice(0, -1).map((point, index) => ({
     index,
@@ -4415,6 +4483,8 @@ function workflowEdgeLabelPoint(edge, points) {
   const pointOn = (labelSegment) => {
     const point = labelPoint({ ...edge, labelSegment }, points);
     if (points[labelSegment][0] === points[labelSegment + 1][0]) point[1] += 10;
+    // a run under both nodes is a channel too shallow to stack its label above, so the label masks the line
+    else if (!CLASSIC_WORKFLOW_STYLE && points[labelSegment][1] > channelFloor) point[1] += 13;
     return point;
   };
   // The longest horizontal run is the preferred home, but a run shorter than
@@ -4477,8 +4547,8 @@ function automaticPortCandidates(edge, node, side, preferred, counterpart) {
     for (const endpoint of ['from', 'to']) {
       if (other[endpoint] !== node.id) continue;
       const point = endpoint === 'from' ? routed.points[0] : routed.points.at(-1);
-      const ownWidth = edge.width || (edge.variant === 'emphasis' ? 1.8 : 1.4);
-      const otherWidth = other.width || (other.variant === 'emphasis' ? 1.8 : 1.4);
+      const ownWidth = edge.width || (edge.variant === 'emphasis' ? 1.3 : 1);
+      const otherWidth = other.width || (other.variant === 'emphasis' ? 1.3 : 1);
       if (Math.abs(point[1 - axis] - center[1 - axis]) < 0.0001) {
         occupied.push({ coordinate: point[axis], clearance: Math.max(16, 3.5 * (ownWidth + otherWidth)) });
       }
@@ -4519,7 +4589,7 @@ function automaticEndpointRepairs(edge, selected, from, to, naturalFromSide, nat
     [edge.from, edge.to].some(id => id === other.from || id === other.to)
       ? [] : polylineBendContacts(selected.points, routed.points)
   )) : [];
-  const strokeWidth = relation => relation.width || (relation.variant === 'emphasis' ? 1.8 : 1.4);
+  const strokeWidth = relation => relation.width || (relation.variant === 'emphasis' ? 1.3 : 1);
   const arrowRelation = relation => ({ ...relation, width: strokeWidth(relation) });
   const ownArrow = arrowRelation(edge);
   const incoming = [...(nodeRoutes.get(edge.to) ?? [])].map(([relation, routed]) => ({
@@ -5208,7 +5278,7 @@ function measuredContentBounds() {
       y: laneTop(group.lane) + layout.laneTitleH + GROUP_FRAME_TOP_INSET,
       width: span.width,
       height: workflow.schema_version === 2
-        ? laneHeight(group.lane) - layout.laneTitleH
+        ? laneHeight(group.lane) - layout.laneTitleH - (layout.laneFootH || 0)
           - GROUP_FRAME_TOP_INSET - GROUP_FRAME_BOTTOM_INSET
         : layout.laneH - layout.laneTitleH - 16,
     }, `group ${group.id}`);
@@ -5318,8 +5388,9 @@ function renderLane(lane, index) {
     : '';
   const labelClass = lane.variant === 'exception' ? 't-security' : 't-muted';
   const prefix = lane.variant === 'exception' ? 'EX' : String(index + 1).padStart(2, '0');
-  return `        <rect data-graph-role="structural-frame" data-composition-frame-kind="lane" data-composition-frame-id="lane-${index}" x="${layout.laneX}" y="${y}" width="${layout.laneW}" height="${height}" rx="10" class="c-lane" stroke-width="1"/>${exception}
-        <text x="${layout.laneX + 14}" y="${y + 22}" class="${labelClass}" font-size="10" font-weight="600">${prefix} / ${esc(lane.label)}</text>`;
+  const title = laneTitle();
+  return `        <rect data-graph-role="structural-frame" data-composition-frame-kind="lane" data-composition-frame-id="lane-${index}" x="${layout.laneX}" y="${y}" width="${layout.laneW}" height="${height}" rx="8" class="c-lane" stroke-width="1"/>${exception}
+        <text x="${layout.laneX + title.x}" y="${y + title.baseline}" class="${labelClass}" font-size="${title.fontSize}" font-weight="600">${prefix} / ${esc(lane.label)}</text>`;
 }
 
 function renderPhase(phase) {
@@ -5340,13 +5411,13 @@ function renderGroup(group, index) {
   const span = groupSpan(group);
   const y = laneTop(group.lane) + layout.laneTitleH + GROUP_FRAME_TOP_INSET;
   const height = workflow.schema_version === 2
-    ? laneHeight(group.lane) - layout.laneTitleH
+    ? laneHeight(group.lane) - layout.laneTitleH - (layout.laneFootH || 0)
       - GROUP_FRAME_TOP_INSET - GROUP_FRAME_BOTTOM_INSET
     : layout.laneH - layout.laneTitleH - 16;
   const cls = group.variant === 'security' ? 'c-security-group' : 'c-lane';
   const textClass = variantAccent(group.variant);
   const labelY = workflow.schema_version === 2 ? y + GROUP_LABEL_BASELINE_OFFSET : y + 14;
-  return `        <rect data-graph-role="structural-frame" data-composition-frame-kind="group" data-composition-frame-id="group-${index}" x="${span.x}" y="${y}" width="${span.width}" height="${height}" rx="9" class="${cls}" stroke-width="1"/>
+  return `        <rect data-graph-role="structural-frame" data-composition-frame-kind="group" data-composition-frame-id="group-${index}" x="${span.x}" y="${y}" width="${span.width}" height="${height}" rx="8" class="${cls}" stroke-width="1"/>
         <text x="${span.x + 10}" y="${labelY}" class="${textClass}" font-size="7" font-weight="600">${esc(group.label)}</text>`;
 }
 
@@ -5363,8 +5434,11 @@ function readableSublabelMinimum() {
 function validateReadableNodeText() {
   const diagnostics = [];
   const minimum = readableSublabelMinimum();
+  const tidy = workflow.schema_version === 2 && !CLASSIC_WORKFLOW_STYLE;
   for (const node of nodes.values()) {
     if (!node.sublabel) continue;
+    // fork cards wrap the sublabel to two full-size lines before shrinking it
+    if (tidy && minimum <= TIDY_CARD.sub && tidySublabelFits(node.sublabel, node.width - TIDY_CARD.textX - TIDY_CARD.padRight)) continue;
     const maximumCanvasWidth = Math.floor(DESKTOP_READER_DIAGRAM_WIDTH
       * nodeTextFit.sublabelPreferred / MIN_PROJECTED_NODE_TEXT_PX);
     const fontBudgetExceeded = minimum > nodeTextFit.sublabelPreferred;
@@ -5402,6 +5476,7 @@ function renderNode(node) {
   const fill = componentFill[node.type] || 'c-external';
   const accent = componentText[node.type] || 't-muted';
   const hasSub = node.sublabel != null && node.sublabel !== '';
+  if (workflow.schema_version === 2 && !CLASSIC_WORKFLOW_STYLE) return renderTidyNode(node, fill, hasSub);
   const labelFontSize = fittedNodeFontSize(node.label, brandLabelFitWidth(node, node.width), nodeTextFit.labelPreferred, nodeTextFit.labelMinimum);
   const sublabelMinimum = Math.min(nodeTextFit.sublabelPreferred, readableSublabelMinimum());
   const sublabelFontSize = fittedNodeFontSize(node.sublabel, node.width, nodeTextFit.sublabelPreferred, sublabelMinimum);
@@ -5420,18 +5495,45 @@ function renderNode(node) {
   const brand = renderBrandMark(node, { x: node.x + node.width - 22, y: node.y + 6 });
   const passport = { kind: node.type, sublabel: node.sublabel, tag: node.tag, context: nodeContext(node), ...brandMetadataFor(node) };
   return `        <g ${focusNodeAttrs(node.id, node.label, passport, workflow.meta.locale)}>
-          ${focusNodeTitle(node.label, passport)}
-          <rect x="${node.x}" y="${node.y}" width="${node.width}" height="${node.height}" rx="8" class="c-mask"/>
-          <rect x="${node.x}" y="${node.y}" width="${node.width}" height="${node.height}" rx="8" class="${fill}"${animateAttr(workflow.meta, 'node', nodeStep(node))} stroke-width="1.5"/>
+          <rect x="${node.x}" y="${node.y}" width="${node.width}" height="${node.height}" rx="5" class="c-mask"/>
+          <rect x="${node.x}" y="${node.y}" width="${node.width}" height="${node.height}" rx="5" class="${fill}"${animateAttr(workflow.meta, 'node', nodeStep(node))} stroke-width="1.5"/>
           ${renderSemanticSigil(node.type, { icon: node.icon, x: node.x + 6, y: node.y + labelLayout.sigilY, size: labelLayout.sigilSize })}${brand ? `\n          ${brand}` : ''}
           <text data-node-label=""${hasSub ? ' data-detail-anchor=""' : ''} x="${node.x + labelLayout.x}" y="${node.y + labelLayout.ys[0]}" class="t-primary" font-size="${labelFontSize}" font-weight="600" text-anchor="middle">${esc(node.label)}</text>${sub}${tag}
+        </g>`;
+}
+
+// every card puts its title on the same row, so a lane reads as one line of titles; text only shrinks when an authored width forces it
+function renderTidyNode(node, fill, hasSub) {
+  const brand = renderBrandMark(node, { x: node.x + node.width - 22, y: node.y + 6 });
+  const source = Boolean(sourceEvidence?.nodes?.[node.id]?.length);
+  const x = node.x + TIDY_CARD.textX;
+  const titleRoom = node.width - TIDY_CARD.textX - (brand ? 26 : TIDY_CARD.padRight) - (source ? SOURCE_BADGE_FOOTPRINT : 0);
+  const fitted = (text, room, preferred, minimum) => Math.max(minimum,
+    Math.min(preferred, Math.floor(room / (Math.max(1, textUnits(text)) * 0.6) * 10) / 10));
+  const labelFontSize = fitted(node.label, titleRoom, TIDY_CARD.title, TIDY_CARD.titleMinimum);
+  const subRoom = node.width - TIDY_CARD.textX - TIDY_CARD.padRight;
+  let sub = '';
+  if (hasSub && tidySublabelFits(node.sublabel, subRoom)) {
+    const lines = tidySublabelLines(node.sublabel, subRoom);
+    // the trailing space keeps textContent readable when the two lines are joined
+    sub = `\n          <text data-detail="context" x="${x}" y="${node.y + TIDY_CARD.subY}" class="t-muted" font-size="${TIDY_CARD.sub}">${lines.map((line, index) => `<tspan x="${x}" y="${node.y + TIDY_CARD.subY + index * TIDY_CARD.subLine}">${esc(line)}${index < lines.length - 1 ? ' ' : ''}</tspan>`).join('')}</text>`;
+  } else if (hasSub) {
+    const size = fitted(node.sublabel, subRoom, TIDY_CARD.sub, Math.min(TIDY_CARD.sub, readableSublabelMinimum()));
+    sub = `\n          <text data-detail="context" x="${x}" y="${node.y + TIDY_CARD.subY}" class="t-muted" font-size="${size}">${esc(node.sublabel)}</text>`;
+  }
+  const passport = { kind: node.type, sublabel: node.sublabel, tag: node.tag, context: nodeContext(node), ...brandMetadataFor(node) };
+  return `        <g ${focusNodeAttrs(node.id, node.label, passport, workflow.meta.locale)}>
+          <rect x="${node.x}" y="${node.y}" width="${node.width}" height="${node.height}" rx="5" class="c-mask"/>
+          <rect x="${node.x}" y="${node.y}" width="${node.width}" height="${node.height}" rx="5" class="${fill}"${animateAttr(workflow.meta, 'node', nodeStep(node))} stroke-width="1.5"/>
+          ${renderSemanticSigil(node.type, { icon: node.icon, x: node.x + TIDY_CARD.iconX, y: node.y + TIDY_CARD.iconY })}${brand ? `\n          ${brand}` : ''}
+          <text data-node-label="" x="${x}" y="${node.y + TIDY_CARD.titleY}" class="t-primary" font-size="${labelFontSize}" font-weight="600">${esc(node.label)}</text>${sub}
         </g>`;
 }
 
 // Rounded corners must leave every visible straight segment above the
 // artifact check's 8px floor, including short arrow attachment stubs.
 function roundedWorkflowPath(points) {
-  let radius = 8;
+  let radius = 5;
   for (let index = 1; index < points.length; index += 1) {
     const length = Math.hypot(points[index][0] - points[index - 1][0], points[index][1] - points[index - 1][1]);
     const corners = (index > 1 ? 1 : 0) + (index < points.length - 1 ? 1 : 0);
@@ -5443,7 +5545,7 @@ function roundedWorkflowPath(points) {
 function renderEdgePath(edge, index) {
   const [cls, marker] = arrowClassMap[edge.variant || 'default'] || arrowClassMap.default;
   const routed = pathFor(edge);
-  const strokeWidth = edge.width || (edge.variant === 'emphasis' ? 1.8 : 1.4);
+  const strokeWidth = edge.width || (edge.variant === 'emphasis' ? 1.3 : 1);
   const routing = independentAutomaticRoute(edge) ? ' data-composition-routing="workflow-v2-auto"' : '';
   const role = workflow.schema_version === 2 ? ` data-edge-role="${esc(edge.role || '')}"` : '';
   return `        <path ${focusEdgeAttrs(edge.from, edge.to, edge.label, index, edge.id)}${routing}${role} data-composition-points="${routePointsValue(routed.points)}" d="${roundedWorkflowPath(routed.points)}" class="${cls}"${animateAttr(workflow.meta, 'edge', edgeSteps.get(edge))} stroke-width="${strokeWidth}" marker-end="url(#${marker})"/>`;
@@ -5456,7 +5558,7 @@ function renderEdgeLabel(edge, index) {
   const labelW = workflowLabelWidth(edge.label);
   return `        <g data-detail="context" ${focusEdgeAttrs(edge.from, edge.to, edge.label, index, edge.id)}>
           <rect x="${lx - labelW / 2}" y="${ly - 10}" width="${labelW}" height="14" rx="3" class="c-mask"/>
-          <text x="${lx}" y="${ly}" class="${!edge.variant || edge.variant === 'default' ? 't-muted' : edgeLabelAccent(edge.variant)}" font-size="8" text-anchor="middle">${esc(edge.label)}</text>
+          <text x="${lx}" y="${ly}" class="${!edge.variant || edge.variant === 'default' ? 't-muted' : edgeLabelAccent(edge.variant)}" font-size="${EDGE_LABEL_FONT}" text-anchor="middle">${esc(edge.label)}</text>
         </g>`;
 }
 
@@ -5480,14 +5582,15 @@ function renderSvg() {
   // width reads at page width with vertical scroll, like a tall stack.
   const readerFit = workflow.schema_version === 2
     && !workflow.meta?.viewBox
-    && ((hasVerticalStack(workflow) && asArray(layout.laneHeights).some((height) => height > 104))
+    && ((hasVerticalStack(workflow) && asArray(layout.laneHeights)
+      .some((height) => height > layout.laneTitleH + 74 + (layout.laneFootH || 0)))
       || predictedFixedWidthOverflow({ viewBoxWidth: viewBox[0], viewBoxHeight: viewBox[1], diagramType: 'workflow' }))
     ? ' data-reader-fit="width-first"'
     : '';
   const contract = workflow.schema_version === 2 ? ' data-layout-contract="readable-v2"' : '';
   return `      <svg viewBox="0 0 ${viewBox[0]} ${viewBox[1]}"${readerFit}${contract} ${svgRootAttrs(workflow.meta, resolvedQualityProfile)} ${NODE_CARD_ATTR}>
 ${svgAccessibleText(workflow.meta, 'workflow')}
-${renderDefinitions()}
+${renderDefinitions('', { fixedArrowheads: true })}
 ${nodeCardStyle()}
 
         <!-- Background Grid -->

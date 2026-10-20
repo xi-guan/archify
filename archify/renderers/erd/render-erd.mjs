@@ -5,7 +5,6 @@ import {
   animateAttr,
   focusEdgeAttrs,
   focusNodeAttrs,
-  focusNodeTitle,
   loadDiagram,
   svgAccessibleText,
   svgRootAttrs,
@@ -1420,7 +1419,6 @@ function renderEntity(entity) {
   const rows = renderEntityColumnRows(entity);
   const r = 8;
   return `        <g ${focusNodeAttrs(entity.id, entity.label, passport, er.meta.locale)} class="${hueClassOf(entity.tag)}">
-          ${focusNodeTitle(entity.label, passport)}
           <rect x="${entity.x}" y="${entity.y}" width="${entity.width}" height="${entity.height}" rx="${r}" class="c-mask"/>
           <rect x="${entity.x}" y="${entity.y}" width="${entity.width}" height="${entity.height}" rx="${r}" class="c-database er-table"${animateAttr(er.meta, 'node', entitySteps.get(entity.id))} stroke-width="1.2"/>
           <path class="er-table-header" d="M ${entity.x + r} ${entity.y} H ${entity.x + entity.width - r} A ${r} ${r} 0 0 1 ${entity.x + entity.width} ${entity.y + r} V ${header} H ${entity.x} V ${entity.y + r} A ${r} ${r} 0 0 1 ${entity.x + r} ${entity.y} Z"/>

@@ -8,23 +8,36 @@ import {
 
 export { esc };
 
+// fork: ARCHIFY_FORK_STYLE=classic keeps the pre-redesign look that upstream tests and derived files pin; read per call so a test can change it after import
+export function isClassicStyle() {
+  return process.env.ARCHIFY_FORK_STYLE === 'classic';
+}
+
 // `extra` appends type-owned definitions (the entity renderer's cardinality
 // markers) inside the same <defs>. Callers that pass nothing keep the exact
-// bytes the five longer-standing renderers already emit.
-export function renderDefinitions(extra = '') {
+// bytes the five longer-standing renderers already emit. `fixedArrowheads`
+// keeps arrowheads 10 units long whatever the stroke, so a bend just before
+// the target stays visible.
+export function renderDefinitions(extra = '', { fixedArrowheads = false } = {}) {
+  // fork: every type draws its arrowhead at one fixed size instead of scaling with the line
+  const units = fixedArrowheads || !isClassicStyle() ? ' markerUnits="userSpaceOnUse"' : '';
+  // fork: an open chevron in upstream's 10x7 box; ARCHIFY_FORK_STYLE=classic keeps upstream's solid triangle
+  const head = isClassicStyle()
+    ? '0 0, 10 3.5, 0 7'
+    : '6.42 0.08, 9.85 3.5, 6.42 6.92, 5.58 6.08, 8.15 3.5, 5.58 0.92';
   return `        <!-- Definitions -->
         <defs>
-          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-            <polygon points="0 0, 10 3.5, 0 7" class="m-default" />
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"${units}>
+            <polygon points="${head}" class="m-default" />
           </marker>
-          <marker id="arrowhead-emphasis" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-            <polygon points="0 0, 10 3.5, 0 7" class="m-emphasis" />
+          <marker id="arrowhead-emphasis" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"${units}>
+            <polygon points="${head}" class="m-emphasis" />
           </marker>
-          <marker id="arrowhead-security" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-            <polygon points="0 0, 10 3.5, 0 7" class="m-security" />
+          <marker id="arrowhead-security" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"${units}>
+            <polygon points="${head}" class="m-security" />
           </marker>
-          <marker id="arrowhead-dashed" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
-            <polygon points="0 0, 10 3.5, 0 7" class="m-dashed" />
+          <marker id="arrowhead-dashed" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"${units}>
+            <polygon points="${head}" class="m-dashed" />
           </marker>
           <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
             <path d="M 40 0 L 0 0 0 40" class="c-grid" stroke-width="0.5"/>
@@ -147,6 +160,46 @@ const TEMPLATE_PLACEHOLDERS = [
   I18N_PLACEHOLDER,
 ];
 
+// fork: viewer/fork.css as inlined by generate-viewer; classic pages can never match it, so they drop it
+const FORK_CSS_RE = /[ \t]*\/\* fork style \(archify-design v3\)[\s\S]*?\/\* fork style end \*\/\r?\n/;
+
+// fork: the fixed chevron tip reaches 0.85 past the line end and fork.css draws card borders 1.25 wide
+const ARROW_TIP_TRIM = 0.85 + 1.25 / 2;
+// fork: the chevron's arms start 3.42 back from its tip
+const ARROW_HEAD_DEPTH = 3.42;
+
+// fork: lines ended on the card border's centre so the card hid the chevron tip; end them where the tip meets the border's outer edge, comet where the chevron starts
+function clearArrowTips(svg) {
+  const round = (value) => Math.round(value * 100) / 100;
+  const trimmed = new Map();
+  const edges = svg.replace(/<path\b[^>]*\bmarker-end="url\(#arrowhead(?:-emphasis|-security|-dashed)?\)"[^>]*>/g, (tag) => {
+    const d = / d="([^"]*)"/.exec(tag);
+    if (!d || tag.includes('data-motion-path=') || /[a-z]/.test(d[1].replace(/e[-+]?\d/g, ''))) return tag;
+    const end = /L\s*(-?[\d.]+)[\s,]+(-?[\d.]+)\s*$/.exec(d[1]);
+    if (!end) return tag;
+    const head = d[1].slice(0, end.index);
+    const previous = /([A-Z])[^A-Z]*$/.exec(head);
+    const numbers = head.match(/-?\d*\.?\d+(?:e[-+]?\d+)?/g);
+    if (!previous || 'HVZ'.includes(previous[1]) || !numbers || numbers.length < 2) return tag;
+    const [px, py] = numbers.slice(-2).map(Number);
+    const [tx, ty] = [Number(end[1]), Number(end[2])];
+    const length = Math.hypot(tx - px, ty - py);
+    if (!(length > 8)) return tag;
+    // the delivery check wants every visible straight segment at least 8 long; the comet path is not checked
+    const cut = (trim, floor) => {
+      const amount = Math.min(trim, Math.max(0, length - floor));
+      return `${head}L ${round(tx - (tx - px) / length * amount)} ${round(ty - (ty - py) / length * amount)}`;
+    };
+    trimmed.set(d[1], cut(ARROW_TIP_TRIM, 8));
+    return tag.replace(d[0], ` d="${cut(ARROW_TIP_TRIM, 8)}" data-motion-path="${cut(ARROW_TIP_TRIM + ARROW_HEAD_DEPTH, 1)}"`);
+  });
+  // the delivery check only credits a crossover halo whose d matches its edge's d
+  return edges.replace(/<path\b[^>]*\bdata-graph-role="automatic-crossover-underlay"[^>]*>/g, (tag) => {
+    const d = / d="([^"]*)"/.exec(tag);
+    return d && trimmed.has(d[1]) ? tag.replace(d[0], ` d="${trimmed.get(d[1])}"`) : tag;
+  });
+}
+
 export function applyTemplate(template, {
   title,
   subtitle,
@@ -185,15 +238,17 @@ export function applyTemplate(template, {
     ? `<p class="subtitle">${esc(subtitle)}</p>`
     : '';
   const i18nData = `    <script id="archify-i18n-data" type="application/json">${i18nJson}</script>`;
-  return localizeTemplate(template, resolvedLocale)
+  // viewer/fork.css and the fork branches in the viewer scripts key off this; classic keeps upstream's bytes
+  const forkStyle = isClassicStyle() ? '' : ' data-fork-style=""';
+  return localizeTemplate(forkStyle ? template : template.replace(FORK_CSS_RE, ''), resolvedLocale)
     .replace(I18N_PLACEHOLDER, () => i18nData)
-    .replace(TEMPLATE_PLACEHOLDERS[0], () => `<html lang="${esc(resolvedLocale)}" data-theme="dark" data-preset="${esc(visualPreset)}">`)
+    .replace(TEMPLATE_PLACEHOLDERS[0], () => `<html lang="${esc(resolvedLocale)}" data-theme="dark" data-preset="${esc(visualPreset)}"${forkStyle}>`)
     .replace(TEMPLATE_PLACEHOLDERS[1], () => `<title>${esc(translateMessage(resolvedLocale, 'page.title', { title }))}</title>`)
     .replace(TEMPLATE_PLACEHOLDERS[2], () => `<h1>${esc(title)}</h1>`)
     .replace(SUBTITLE_SLOT_RE, (_match, indent, newline = '') => renderedSubtitle
       ? `${indent}${renderedSubtitle}${newline}`
       : '')
-    .replace(SVG_SLOT_RE, () => svg)
+    .replace(SVG_SLOT_RE, () => (forkStyle ? clearArrowTips(svg) : svg))
     .replace(CARDS_SLOT_RE, () => cards)
     .replace(SOURCE_EVIDENCE_PLACEHOLDER, () => sourceEvidence
       ? `    <script id="archify-source-evidence-data" type="application/json">${sourceEvidenceJson}</script>`

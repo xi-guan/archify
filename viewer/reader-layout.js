@@ -267,8 +267,10 @@
         var diagramWidth = Math.max(1, rounded - railShare - chromeMetrics().diagramX);
         // Content fitting and automatic enlargement never reduce the outer
         // reader region. The SVG alone takes the narrower reading width.
+        // fork style enlarges at most 1.25x, so text stays near its authored px
+        var sourceCap = html.hasAttribute('data-fork-style') && viewBox && viewBox.width > 0 ? viewBox.width * 1.25 : 0;
         var automaticWidthCap = measuredHeightFit && viewBox && viewBox.width > 0
-          ? viewBox.width * MAX_AUTOMATIC_SCALE : 0;
+          ? sourceCap || viewBox.width * MAX_AUTOMATIC_SCALE : 0;
         if (automaticWidthCap && diagramWidth > automaticWidthCap) {
           diagramWidth = automaticWidthCap;
           html.style.setProperty('--archify-diagram-min-height', automaticAreaHeight + 'px');
@@ -278,6 +280,7 @@
           // Settling can also stop binding the cap without a new measure.
           html.style.removeProperty('--archify-diagram-min-height');
           html.removeAttribute('data-reader-area');
+          if (sourceCap && diagramWidth > sourceCap) diagramWidth = sourceCap;
         }
         if (diagramWidth < Math.max(rounded, shellFloor) - railShare - chromeMetrics().diagramX) {
           html.style.setProperty('--archify-diagram-max-width', diagramWidth + 'px');

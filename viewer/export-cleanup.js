@@ -70,6 +70,10 @@
         Array.prototype.forEach.call(clone.querySelectorAll('[data-relationship-pulse-overlay]'), function (el) {
           el.remove();
         });
+        // fork: viewer-only state marks such as the reach tag
+        Array.prototype.forEach.call(clone.querySelectorAll('[data-fork-overlay]'), function (el) {
+          el.remove();
+        });
         Array.prototype.forEach.call(clone.querySelectorAll('[data-relationship-hit-overlay]'), function (el) {
           el.remove();
         });

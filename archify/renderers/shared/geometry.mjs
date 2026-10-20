@@ -806,7 +806,7 @@ function shortWorkflowTrunk(left, right, leftSegment, rightSegment, length) {
   if (length > 24 + 0.0001) return false;
   const a = left.relation, b = right.relation;
   const variant = (edge) => edge.variant || 'default';
-  const width = (edge) => edge.width || (variant(edge) === 'emphasis' ? 1.8 : 1.4);
+  const width = (edge) => edge.width || (variant(edge) === 'emphasis' ? 1.3 : 1);
   if (variant(a) !== variant(b) || width(a) !== width(b) || (a.role || '') !== (b.role || '')) return false;
   const same = (p, q) => Math.abs(p[0] - q[0]) < 0.0001 && Math.abs(p[1] - q[1]) < 0.0001;
   const source = left.sourceEndpoint !== false && right.sourceEndpoint !== false
@@ -821,7 +821,8 @@ function shortWorkflowTrunk(left, right, leftSegment, rightSegment, length) {
   return (q[0] - p[0]) * (s[0] - r[0]) + (q[1] - p[1]) * (s[1] - r[1]) > 0;
 }
 
-// Bundled arrow markers are 7 stroke-widths across the direction of travel.
+// Bundled arrow markers are 7 units across the direction of travel; the bound
+// still grows with heavier authored strokes so their spacing stays unchanged.
 // Callers select the automatic routes they own; explicit junctions are preserved,
 // and relations on one junction ending at the same state share a merged drop.
 export function collectArrowheadCollisions({ routedRelations, allowShortWorkflowTrunks = false }) {
@@ -835,7 +836,7 @@ export function collectArrowheadCollisions({ routedRelations, allowShortWorkflow
     const vertical = Math.abs(tip[0] - previous[0]) < 0.0001;
     const axis = vertical ? 0 : 1;
     const direction = Math.sign(tip[1 - axis] - previous[1 - axis]);
-    const halfWidth = 3.5 * (entry.relation.width || (entry.relation.variant === 'emphasis' ? 1.8 : 1.5));
+    const halfWidth = 3.5 * Math.max(1, entry.relation.width || (entry.relation.variant === 'emphasis' ? 1.3 : 1));
     const key = `${entry.relation.to}\u0000${axis}\u0000${direction}`;
     const siblings = incoming.get(key) || [];
     const current = { ...entry, tip, halfWidth };

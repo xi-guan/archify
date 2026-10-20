@@ -169,9 +169,10 @@ for (const [mode, example] of Object.entries(CASES)) {
     assert.match(svg, /<svg[^>]+data-animation="trace"/);
     assert.match(svg, /data-animate="edge" style="--step:0"/);
     assert.match(svg, /data-animate="node" style="--step:0"/);
-    assert.match(svg, /aria-labelledby="archify-diagram-title archify-diagram-description"/);
-    assert.match(svg, /<title id="archify-diagram-title">[^<]+<\/title>/);
+    assert.match(svg, /aria-label="[^"]+" aria-describedby="archify-diagram-description"/);
     assert.match(svg, /<desc id="archify-diagram-description">[^<]+<\/desc>/);
+    // any <title> inside the SVG would raise a native hover tooltip over the diagram
+    assert.doesNotMatch(svg, /<title\b/);
     assert.match(svg, /id="node-[^"]+" data-node-id="[^"]+"[^>]+role="button"[^>]+aria-pressed="false"/);
     assert.match(svg, /data-edge-from="[^"]+" data-edge-to="[^"]+"/);
   });
@@ -186,7 +187,7 @@ test('semantic SVG identity is deterministic for unchanged input', () => {
 
 test('Live relay ships comet layers whose timing the Motion Governor plans', () => {
   const html = render('architecture', CASES.architecture);
-  for (const layer of ['wake', 'glow', 'halo', 'tail', 'head', 'ripple']) {
+  for (const layer of ['wake', 'glow', 'halo', 'tail', 'head']) {
     assert.match(html, new RegExp(`\\.ambient-flow-${layer} \\{`));
   }
   assert.match(html, /@keyframes archify-node-enter/);
