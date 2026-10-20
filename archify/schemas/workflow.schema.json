@@ -66,6 +66,9 @@
             "showcase"
           ]
         },
+        "centered_lanes": {
+          "type": "boolean"
+        },
         "repository": {
           "$ref": "common.schema.json#/$defs/repository"
         },

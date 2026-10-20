@@ -22,6 +22,7 @@ export const browserTestFiles = [
   'motion-governor-browser.test.mjs',
   'finder-browser.test.mjs',
   'intent-trace-browser.test.mjs',
+  'hover-light-browser.test.mjs',
   'semantic-lens-browser.test.mjs',
   'reading-address-browser.test.mjs',
   'route-probe-browser.test.mjs',

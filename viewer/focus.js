@@ -419,7 +419,7 @@
       function relationshipEdgeShapes(edge) {
         if (!edge) return [];
         if (/^(path|line|polyline)$/i.test(edge.tagName || '')) return [edge];
-        return Array.prototype.slice.call(edge.querySelectorAll('path:not([data-ambient-flow-overlay]), line, polyline'));
+        return Array.prototype.slice.call(edge.querySelectorAll('path:not([data-ambient-flow-overlay]):not([data-label-light] *), line:not([data-label-light] *), polyline:not([data-label-light] *)'));
       }
       function relationshipHitRecords() {
         var recordsByKey = {};
@@ -657,12 +657,15 @@
         overlay.setAttribute('data-relationship-pulse-key', key);
         overlay.setAttribute('aria-hidden', 'true');
         var tokenAdded = false;
+        var lights = [];
         matchingEdges.forEach(function (edge) {
           var wrapper = document.createElementNS(svgNamespace, 'g');
           if (edge.hasAttribute('transform')) wrapper.setAttribute('transform', edge.getAttribute('transform'));
           var shapes = relationshipEdgeShapes(edge);
           shapes.forEach(function (shape) {
-            wrapper.appendChild(relationshipPulseGeometry(shape));
+            var light = relationshipPulseGeometry(shape);
+            lights.push([light, shape]);
+            wrapper.appendChild(light);
           });
           if (!tokenAdded && shapes.length) {
             var tokenKind = relationshipTokenKind(edge);
@@ -676,14 +679,18 @@
           if (wrapper.childNodes.length) overlay.appendChild(wrapper);
         });
         if (!overlay.childNodes.length) return false;
+        var copies = [];
         var finishPulse = function () {
           if (overlay.parentNode) overlay.remove();
+          copies.forEach(function (copy) { copy.remove(); });
         };
         overlay.addEventListener('animationend', finishPulse, { once: true });
         overlay.addEventListener('animationcancel', finishPulse, { once: true });
         var firstNode = svg.querySelector('[data-node-id]');
         if (firstNode) svg.insertBefore(overlay, firstNode);
         else svg.appendChild(overlay);
+        lights.forEach(function (pair) { Archify.flowContrast(pair[0], pair[1]); });
+        copies = Archify.labelLights(svg, overlay, lights);
         return true;
       }
       function clearRelationshipPreview(options) {

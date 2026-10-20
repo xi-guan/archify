@@ -141,6 +141,9 @@ test('Motion Governor preserves mode, ownership, continuous Live flow and real c
     fs.writeFileSync(path.join(evidence, name + '.png'), Buffer.from(shot.data, 'base64'));
   }
 
+  // a masked card glows through its opaque backing mask; unmasked shapes glow themselves
+  const glowTargets = `Array.from(document.querySelectorAll('[data-animate="node"]'),e=>{const m=e.previousElementSibling;return m&&m.classList.contains('c-mask')&&e.parentNode.hasAttribute('data-node-id')?m:e;})`;
+
   await t.test('ten modes preserve authored geometry and semantics; representative flows keep cycling and resume', async () => {
     for (const mode of Object.keys(cases)) {
       await load(mode);
@@ -160,7 +163,7 @@ test('Motion Governor preserves mode, ownership, continuous Live flow and real c
           edges:edges.length, flows:flows.length, paths:paths.length, circles:circles.length,
           valid:paths.every(e=>e.getAttribute('d')===(e.previousElementSibling.getAttribute('data-motion-path')||e.previousElementSibling.getAttribute('d')))&&
           circles.every(e=>e.getAttribute('cx')!==null&&e.getAttribute('cy')!==null)&&
-          flows.every(e=>Array.from(e.attributes).every(a=>!a.name.startsWith('data-')||['data-ambient-flow-overlay','data-tree-ancestors'].includes(a.name))&&
+          flows.every(e=>Array.from(e.attributes).every(a=>!a.name.startsWith('data-')||['data-ambient-flow-overlay','data-tree-ancestors','data-flow-contrast'].includes(a.name))&&
           !e.id&&!e.hasAttribute('role')&&!e.hasAttribute('tabindex')&&!e.hasAttribute('marker-end')&&getComputedStyle(e).pointerEvents==='none'),
           originalAnimations:edges.map(e=>getComputedStyle(e).animationName),
           reverse:edges.filter(e=>e.hasAttribute('data-motion-path')&&e.getAttribute('data-motion-path')!==e.getAttribute('d')).length,
@@ -198,7 +201,7 @@ test('Motion Governor preserves mode, ownership, continuous Live flow and real c
             return kinds.join(',')==='wake,glow,halo,tail,head,ripple'&&
               overlays.every(o=>o.style.getPropertyValue('--flow-delay')!=='');
           }),
-          nodeAnims:Array.from(document.querySelectorAll('[data-animate="node"]'), e=>e.getAnimations().map(a=>a.animationName))})`);
+          nodeAnims:${glowTargets}.map(e=>e.getAnimations().map(a=>a.animationName))})`);
         const movement = await run(`(async () => {
           const flow=document.querySelector('.ambient-flow-head'), before=parseFloat(getComputedStyle(flow).strokeDashoffset), start=performance.now();
           await motionWait(()=>performance.now()-start>150);
@@ -286,19 +289,21 @@ test('Motion Governor preserves mode, ownership, continuous Live flow and real c
           const svg=document.querySelector('.diagram-container > svg');
           document.documentElement.setAttribute('data-preset', ${JSON.stringify(preset)});
           svg.setAttribute('data-preset', ${JSON.stringify(preset)});
-          const node=svg.querySelector('[data-node-id] > rect[data-animate="node"]:not(.c-mask)');
+          // the translucent card stays flat; its opaque backing mask carries depth and glow
+          const card=svg.querySelector('[data-node-id] > .c-mask + rect[data-animate="node"]'),node=card.previousElementSibling;
           Archify.motionGovernor.pause();
-          const baseline=getComputedStyle(node).filter;
+          const baseline=getComputedStyle(node).filter,stillCard=getComputedStyle(card).filter;
           Archify.motionGovernor.resume();
           const animation=node.getAnimations().find(a=>/^archify-relay-node-[0-9]+$/.test(a.animationName));
+          if(!animation) return {baseline,stillCard,glows:false};
           animation.pause();
           const timing=animation.effect.getTiming();
           animation.currentTime=timing.delay;
           // Chrome pads interpolated filter lists with transparent identity shadows.
           const neutral=getComputedStyle(node).filter.replaceAll('drop-shadow(rgba(0, 0, 0, 0) 0px 0px 0px)', '').trim() || 'none';
           animation.currentTime=timing.delay+250;
-          const peak=getComputedStyle(node).filter;
-          return {baseline,neutral,peak};
+          const peak=getComputedStyle(node).filter,peakCard=getComputedStyle(card).filter;
+          return {baseline,stillCard,neutral,peak,peakCard,glows:true};
         })()`);
         samples.push({preset,theme,...filters});
       }
@@ -306,6 +311,8 @@ test('Motion Governor preserves mode, ownership, continuous Live flow and real c
     t.diagnostic(JSON.stringify(samples));
     for (const filters of samples) {
       const {preset,theme}=filters;
+      assert.equal(filters.glows, true, `${preset}/${theme}: the opaque mask behind the card carries the glow`);
+      assert.deepEqual([filters.stillCard, filters.peakCard], ['none', 'none'], `${preset}/${theme}: a filter on the translucent card would stain its own fill`);
       assert.equal(filters.neutral, filters.baseline, `${preset}/${theme}: neutral Live retains Still card depth`);
       if (preset === 'classic') {
         assert.notEqual(filters.baseline, 'none', `${theme}: fixture exercises Classic depth`);
@@ -315,6 +322,74 @@ test('Motion Governor preserves mode, ownership, continuous Live flow and real c
       }
       assert.notEqual(filters.peak, filters.neutral, `${preset}/${theme}: Live still glows`);
     }
+  });
+
+  const cometTimes = `(() => {
+    const seconds=(element,name)=>parseFloat(element.style.getPropertyValue(name));
+    return Array.from(document.querySelectorAll('path[data-animate="edge"]')).map(edge=>{
+      const layers={};
+      for(let s=edge.nextElementSibling;s&&s.hasAttribute('data-ambient-flow-overlay');s=s.nextElementSibling){
+        ['wake','head','ripple'].forEach(kind=>{if(s.classList.contains('ambient-flow-'+kind)) layers[kind]=s;});
+      }
+      if(!layers.head) return null;
+      return {edge:edge.getAttribute('data-edge-from')+'->'+edge.getAttribute('data-edge-to'),
+        travel:seconds(layers.ripple,'--flow-delay')-seconds(layers.head,'--flow-delay'),
+        head:getComputedStyle(layers.head).stroke,line:getComputedStyle(edge).stroke,
+        duration:layers.head.getAnimations()[0]?.effect.getTiming().duration};
+    }).filter(Boolean);
+  })()`;
+
+  await t.test('ambient comets move slowly enough to follow and never vanish into their own line', async () => {
+    await load('architecture');
+    await run(`Archify.motionGovernor.resume()`);
+    const architecture = await run(cometTimes);
+    for (const comet of architecture) assert.ok(comet.travel >= 0.6, `${comet.edge} takes ${comet.travel}s`);
+    await load('lifecycle');
+    await run(`Archify.motionGovernor.resume()`);
+    const walk = await run(cometTimes);
+    assert.ok(walk.length > 2, 'the lifecycle walk animates its short main path');
+    // one token is the whole story on a walk, so each short hop must stay readable
+    for (const comet of walk) assert.ok(comet.travel >= 1.2, `${comet.edge} walks in ${comet.travel}s`);
+    for (const theme of ['dark', 'light']) {
+      await load('architecture', { theme });
+      await run(`Archify.motionGovernor.resume()`);
+      for (const comet of await run(cometTimes)) assert.notEqual(comet.head, comet.line, `${theme}: ${JSON.stringify(comet)}`);
+    }
+  });
+
+  await t.test('the speed control scales every motion, persists, and follows motion availability', async () => {
+    const speed = `(() => { const b=document.getElementById('btn-motion-speed'); return b && {hidden:b.hidden,disabled:b.disabled,
+      label:document.getElementById('motion-speed-label').textContent,aria:b.getAttribute('aria-label'),
+      stored:localStorage.getItem('archify-motion-speed')}; })()`;
+    const hoverDuration = `(() => { Archify.intentTrace.show('auth');
+      const d=document.querySelector('.intent-trace-flow').getAnimations()[0].effect.getTiming().duration; Archify.intentTrace.clear(); return d; })()`;
+    await load('architecture');
+    await run(`Archify.motionGovernor.resume()`);
+    const normal = await run(speed);
+    assert.ok(normal, 'the toolbar carries a speed control');
+    assert.deepEqual([normal.hidden, normal.disabled, normal.label, normal.stored], [false, false, 'Normal', null]);
+    const base = { comet: (await run(cometTimes))[0].duration, hover: await run(hoverDuration) };
+    const seen = [];
+    for (const [name, factor] of [['Fast', 0.67], ['Slow', 1.5], ['Normal', 1]]) {
+      await run(`document.getElementById('btn-motion-speed').click()`);
+      const state = await run(speed);
+      seen.push(state.label);
+      assert.match(state.aria, new RegExp(name));
+      const comet = (await run(cometTimes))[0].duration, hover = await run(hoverDuration);
+      assert.ok(Math.abs(comet - base.comet * factor) < 2 && Math.abs(hover - base.hover * factor) < 2, `${name}: ${JSON.stringify({ base, comet, hover })}`);
+    }
+    assert.deepEqual(seen, ['Fast', 'Slow', 'Normal']);
+    assert.equal((await run(speed)).stored, null, 'Normal leaves no stored preference');
+    await run(`document.getElementById('btn-motion-speed').click()`);
+    await load('architecture', { preserveStorage: true });
+    assert.deepEqual([(await run(speed)).label, (await run(speed)).stored], ['Fast', 'fast'], 'the choice survives a reload');
+    await run(`localStorage.setItem('archify-motion-speed', 'warp')`);
+    await load('architecture', { preserveStorage: true });
+    assert.equal((await run(speed)).label, 'Normal', 'an unknown stored value falls back to Normal');
+    await load('architecture', { reduced: true });
+    assert.equal((await run(speed)).disabled, true, 'reduced motion has no speed to choose');
+    await load('static');
+    assert.equal((await run(speed)).hidden, true);
   });
 
   await t.test('collapsing Orders hides only its descendant flow overlays', async () => {
@@ -346,8 +421,8 @@ test('Motion Governor preserves mode, ownership, continuous Live flow and real c
       await load(mode);
       await run(`Archify.motionGovernor.resume()`);
       await run(`motionWait(()=>document.documentElement.getAttribute('data-ambient-entry')==='settled')`);
-      await run(`motionWait(()=>Array.from(document.querySelectorAll('[data-animate="node"]')).every(e=>e.getAnimations().some(a=>/^archify-relay-node-[0-9]+$/.test(a.animationName))))`);
-      const nodeState=()=>run(`Array.from(document.querySelectorAll('[data-animate="node"]'),e=>({animations:e.getAnimations().map(a=>a.animationName),filter:getComputedStyle(e).filter,opacity:getComputedStyle(e).opacity}))`);
+      await run(`motionWait(()=>${glowTargets}.every(e=>e.getAnimations().some(a=>/^archify-relay-node-[0-9]+$/.test(a.animationName))))`);
+      const nodeState=()=>run(`${glowTargets}.map(e=>({animations:e.getAnimations().map(a=>a.animationName),filter:getComputedStyle(e).filter,opacity:getComputedStyle(e).opacity}))`);
       assert.ok((await nodeState()).every(n=>n.animations.some(name => /^archify-relay-node-[0-9]+$/.test(name))));
       await send('Emulation.setEmulatedMedia', {media:'print'});
       await run(`Archify.motionGovernor.pause()`);
@@ -357,7 +432,7 @@ test('Motion Governor preserves mode, ownership, continuous Live flow and real c
       assert.deepEqual(await nodeState(), staticPrint, mode + ': printed Live nodes retain Still print styling and no animations');
       assert.equal((await snapshot(mode + '-settled-print')).mode, 'live');
       await media(false);
-      await run(`motionWait(()=>Array.from(document.querySelectorAll('[data-animate="node"]')).every(e=>e.getAnimations().some(a=>/^archify-relay-node-[0-9]+$/.test(a.animationName)&&a.playState==='running')))`);
+      await run(`motionWait(()=>${glowTargets}.every(e=>e.getAnimations().some(a=>/^archify-relay-node-[0-9]+$/.test(a.animationName)&&a.playState==='running')))`);
       assert.equal((await snapshot(mode + '-settled-screen-return')).mode, 'live');
     }
   });

@@ -66,7 +66,7 @@ test('Semantic Flow has preset identities and motion-safe density boundaries', (
   assert.match(html, /svg\[data-preset="signal-flow"\] \.semantic-lens-flow/);
   assert.match(html, /svg\[data-preset="blueprint"\] \.semantic-lens-flow/);
   assert.match(html, /@keyframes archify-semantic-lens-flow/);
-  assert.match(html, /animation: archify-semantic-lens-flow 1\.35s linear 1 both/);
+  assert.match(html, /animation: archify-semantic-lens-flow calc\(1\.35s \* var\(--motion-tempo, 1\)\) linear 1 both/);
   assert.match(html, /entries\.length > MAX_LENS_FLOW_EDGES/);
   assert.match(html, /data-lens-flow-density', 'quiet'/);
   assert.match(html, /html\[data-embed="true"\] \.semantic-lens-overlay/);

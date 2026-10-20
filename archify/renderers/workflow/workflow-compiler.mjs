@@ -7,7 +7,6 @@ import {
   animateAttr,
   focusEdgeAttrs,
   focusNodeAttrs,
-  focusNodeTitle,
   svgAccessibleText,
   svgRootAttrs,
   validateCrossCollectionContracts,
@@ -618,8 +617,10 @@ function createReadableLayout(workflow, layoutFeedback = {}) {
   });
   const groupHeaderHeights = groupLaneReserves.map(({ header }) => header);
   const groupFooterHeights = groupLaneReserves.map(({ footer }) => footer);
+  // opt-in empty band under the nodes, as tall as the title band, so nodes sit mid-lane
+  const laneFootH = workflow.meta?.centered_lanes === true ? 30 : 0;
   const laneHeights = groupLaneReserves.map(({ header, footer }, index) => (
-    laneBaseHeights[index] + header + footer
+    laneBaseHeights[index] + header + footer + laneFootH
   ));
   const laneGap = Math.max(20, Math.ceil(layoutFeedback.laneGapMin || 0));
   for (const [index, reserve] of groupHeaderHeights.entries()) {
@@ -648,6 +649,7 @@ function createReadableLayout(workflow, layoutFeedback = {}) {
     laneHeights,
     laneGap,
     laneTitleH: 30,
+    laneFootH,
     groupHeaderHeights,
     groupFooterHeights,
     colXs,
@@ -988,7 +990,7 @@ function measureWorkflowNodes(workflow, layout, laneGeometry) {
     const height = node.height || (node.tag ? 68 : layout.nodeH);
     const cx = layout.colXs[node.col];
     const groupHeaderH = laneGroupHeaderH(node.lane);
-    const contentH = laneHeight(node.lane) - layout.laneTitleH
+    const contentH = laneHeight(node.lane) - layout.laneTitleH - (layout.laneFootH || 0)
       - groupHeaderH - laneGroupFooterH(node.lane);
     const y = laneTop(node.lane) + layout.laneTitleH + groupHeaderH
       + (contentH - height) / 2 + (node.yOffset || 0);
@@ -1504,7 +1506,7 @@ function workflowCompositionFrames() {
   for (const [index, lane] of asArray(workflow.lanes).entries()) {
     const y = laneTop(lane.id);
     const height = laneHeight(index);
-    frames.push({ id: `lane-${index}`, label: lane.label, kind: 'lane', x: layout.laneX, y, width: layout.laneW, height, radius: 10 });
+    frames.push({ id: `lane-${index}`, label: lane.label, kind: 'lane', x: layout.laneX, y, width: layout.laneW, height, radius: 8 });
     if (lane.variant === 'exception') {
       frames.push({ id: `lane-${index}-exception`, label: `${lane.label} exception`, kind: 'exception-lane', x: layout.laneX + 6, y: y + 6, width: layout.laneW - 12, height: height - 12, radius: 8 });
     }
@@ -1519,10 +1521,10 @@ function workflowCompositionFrames() {
       y: laneTop(group.lane) + layout.laneTitleH + GROUP_FRAME_TOP_INSET,
       width: span.width,
       height: workflow.schema_version === 2
-        ? laneHeight(group.lane) - layout.laneTitleH
+        ? laneHeight(group.lane) - layout.laneTitleH - (layout.laneFootH || 0)
           - GROUP_FRAME_TOP_INSET - GROUP_FRAME_BOTTOM_INSET
         : layout.laneH - layout.laneTitleH - 16,
-      radius: 9,
+      radius: 8,
     });
   }
   return frames;
@@ -2896,7 +2898,7 @@ function validateWorkflow() {
   }));
   if (workflow.schema_version === 2) {
     const routedRelations = workflow.edges.map((relation, relationIndex) => ({
-      relation: { ...relation, width: relation.width || (relation.variant === 'emphasis' ? 1.8 : 1.4) },
+      relation: { ...relation, width: relation.width || (relation.variant === 'emphasis' ? 1.3 : 1) },
       relationIndex, points: pathFor(relation).points,
     }));
     for (const hit of collectArrowheadCollisions({ routedRelations, allowShortWorkflowTrunks: true })) {
@@ -4477,8 +4479,8 @@ function automaticPortCandidates(edge, node, side, preferred, counterpart) {
     for (const endpoint of ['from', 'to']) {
       if (other[endpoint] !== node.id) continue;
       const point = endpoint === 'from' ? routed.points[0] : routed.points.at(-1);
-      const ownWidth = edge.width || (edge.variant === 'emphasis' ? 1.8 : 1.4);
-      const otherWidth = other.width || (other.variant === 'emphasis' ? 1.8 : 1.4);
+      const ownWidth = edge.width || (edge.variant === 'emphasis' ? 1.3 : 1);
+      const otherWidth = other.width || (other.variant === 'emphasis' ? 1.3 : 1);
       if (Math.abs(point[1 - axis] - center[1 - axis]) < 0.0001) {
         occupied.push({ coordinate: point[axis], clearance: Math.max(16, 3.5 * (ownWidth + otherWidth)) });
       }
@@ -4519,7 +4521,7 @@ function automaticEndpointRepairs(edge, selected, from, to, naturalFromSide, nat
     [edge.from, edge.to].some(id => id === other.from || id === other.to)
       ? [] : polylineBendContacts(selected.points, routed.points)
   )) : [];
-  const strokeWidth = relation => relation.width || (relation.variant === 'emphasis' ? 1.8 : 1.4);
+  const strokeWidth = relation => relation.width || (relation.variant === 'emphasis' ? 1.3 : 1);
   const arrowRelation = relation => ({ ...relation, width: strokeWidth(relation) });
   const ownArrow = arrowRelation(edge);
   const incoming = [...(nodeRoutes.get(edge.to) ?? [])].map(([relation, routed]) => ({
@@ -5208,7 +5210,7 @@ function measuredContentBounds() {
       y: laneTop(group.lane) + layout.laneTitleH + GROUP_FRAME_TOP_INSET,
       width: span.width,
       height: workflow.schema_version === 2
-        ? laneHeight(group.lane) - layout.laneTitleH
+        ? laneHeight(group.lane) - layout.laneTitleH - (layout.laneFootH || 0)
           - GROUP_FRAME_TOP_INSET - GROUP_FRAME_BOTTOM_INSET
         : layout.laneH - layout.laneTitleH - 16,
     }, `group ${group.id}`);
@@ -5318,7 +5320,7 @@ function renderLane(lane, index) {
     : '';
   const labelClass = lane.variant === 'exception' ? 't-security' : 't-muted';
   const prefix = lane.variant === 'exception' ? 'EX' : String(index + 1).padStart(2, '0');
-  return `        <rect data-graph-role="structural-frame" data-composition-frame-kind="lane" data-composition-frame-id="lane-${index}" x="${layout.laneX}" y="${y}" width="${layout.laneW}" height="${height}" rx="10" class="c-lane" stroke-width="1"/>${exception}
+  return `        <rect data-graph-role="structural-frame" data-composition-frame-kind="lane" data-composition-frame-id="lane-${index}" x="${layout.laneX}" y="${y}" width="${layout.laneW}" height="${height}" rx="8" class="c-lane" stroke-width="1"/>${exception}
         <text x="${layout.laneX + 14}" y="${y + 22}" class="${labelClass}" font-size="10" font-weight="600">${prefix} / ${esc(lane.label)}</text>`;
 }
 
@@ -5340,13 +5342,13 @@ function renderGroup(group, index) {
   const span = groupSpan(group);
   const y = laneTop(group.lane) + layout.laneTitleH + GROUP_FRAME_TOP_INSET;
   const height = workflow.schema_version === 2
-    ? laneHeight(group.lane) - layout.laneTitleH
+    ? laneHeight(group.lane) - layout.laneTitleH - (layout.laneFootH || 0)
       - GROUP_FRAME_TOP_INSET - GROUP_FRAME_BOTTOM_INSET
     : layout.laneH - layout.laneTitleH - 16;
   const cls = group.variant === 'security' ? 'c-security-group' : 'c-lane';
   const textClass = variantAccent(group.variant);
   const labelY = workflow.schema_version === 2 ? y + GROUP_LABEL_BASELINE_OFFSET : y + 14;
-  return `        <rect data-graph-role="structural-frame" data-composition-frame-kind="group" data-composition-frame-id="group-${index}" x="${span.x}" y="${y}" width="${span.width}" height="${height}" rx="9" class="${cls}" stroke-width="1"/>
+  return `        <rect data-graph-role="structural-frame" data-composition-frame-kind="group" data-composition-frame-id="group-${index}" x="${span.x}" y="${y}" width="${span.width}" height="${height}" rx="8" class="${cls}" stroke-width="1"/>
         <text x="${span.x + 10}" y="${labelY}" class="${textClass}" font-size="7" font-weight="600">${esc(group.label)}</text>`;
 }
 
@@ -5420,9 +5422,8 @@ function renderNode(node) {
   const brand = renderBrandMark(node, { x: node.x + node.width - 22, y: node.y + 6 });
   const passport = { kind: node.type, sublabel: node.sublabel, tag: node.tag, context: nodeContext(node), ...brandMetadataFor(node) };
   return `        <g ${focusNodeAttrs(node.id, node.label, passport, workflow.meta.locale)}>
-          ${focusNodeTitle(node.label, passport)}
-          <rect x="${node.x}" y="${node.y}" width="${node.width}" height="${node.height}" rx="8" class="c-mask"/>
-          <rect x="${node.x}" y="${node.y}" width="${node.width}" height="${node.height}" rx="8" class="${fill}"${animateAttr(workflow.meta, 'node', nodeStep(node))} stroke-width="1.5"/>
+          <rect x="${node.x}" y="${node.y}" width="${node.width}" height="${node.height}" rx="5" class="c-mask"/>
+          <rect x="${node.x}" y="${node.y}" width="${node.width}" height="${node.height}" rx="5" class="${fill}"${animateAttr(workflow.meta, 'node', nodeStep(node))} stroke-width="1.5"/>
           ${renderSemanticSigil(node.type, { icon: node.icon, x: node.x + 6, y: node.y + labelLayout.sigilY, size: labelLayout.sigilSize })}${brand ? `\n          ${brand}` : ''}
           <text data-node-label=""${hasSub ? ' data-detail-anchor=""' : ''} x="${node.x + labelLayout.x}" y="${node.y + labelLayout.ys[0]}" class="t-primary" font-size="${labelFontSize}" font-weight="600" text-anchor="middle">${esc(node.label)}</text>${sub}${tag}
         </g>`;
@@ -5431,7 +5432,7 @@ function renderNode(node) {
 // Rounded corners must leave every visible straight segment above the
 // artifact check's 8px floor, including short arrow attachment stubs.
 function roundedWorkflowPath(points) {
-  let radius = 8;
+  let radius = 5;
   for (let index = 1; index < points.length; index += 1) {
     const length = Math.hypot(points[index][0] - points[index - 1][0], points[index][1] - points[index - 1][1]);
     const corners = (index > 1 ? 1 : 0) + (index < points.length - 1 ? 1 : 0);
@@ -5443,7 +5444,7 @@ function roundedWorkflowPath(points) {
 function renderEdgePath(edge, index) {
   const [cls, marker] = arrowClassMap[edge.variant || 'default'] || arrowClassMap.default;
   const routed = pathFor(edge);
-  const strokeWidth = edge.width || (edge.variant === 'emphasis' ? 1.8 : 1.4);
+  const strokeWidth = edge.width || (edge.variant === 'emphasis' ? 1.3 : 1);
   const routing = independentAutomaticRoute(edge) ? ' data-composition-routing="workflow-v2-auto"' : '';
   const role = workflow.schema_version === 2 ? ` data-edge-role="${esc(edge.role || '')}"` : '';
   return `        <path ${focusEdgeAttrs(edge.from, edge.to, edge.label, index, edge.id)}${routing}${role} data-composition-points="${routePointsValue(routed.points)}" d="${roundedWorkflowPath(routed.points)}" class="${cls}"${animateAttr(workflow.meta, 'edge', edgeSteps.get(edge))} stroke-width="${strokeWidth}" marker-end="url(#${marker})"/>`;
@@ -5487,7 +5488,7 @@ function renderSvg() {
   const contract = workflow.schema_version === 2 ? ' data-layout-contract="readable-v2"' : '';
   return `      <svg viewBox="0 0 ${viewBox[0]} ${viewBox[1]}"${readerFit}${contract} ${svgRootAttrs(workflow.meta, resolvedQualityProfile)} ${NODE_CARD_ATTR}>
 ${svgAccessibleText(workflow.meta, 'workflow')}
-${renderDefinitions()}
+${renderDefinitions('', { fixedArrowheads: true })}
 ${nodeCardStyle()}
 
         <!-- Background Grid -->

@@ -113,8 +113,8 @@ test('Intent Trace preserves input handoffs, transient geometry and cleanup', {
         selected:[...svg.querySelectorAll('[data-intent-trace-selected]')].map(n=>n.getAttribute('data-node-id')),
         matched:[...svg.querySelectorAll('[data-node-id][data-intent-trace-match]')].map(n=>n.getAttribute('data-node-id')),
         edges:svg.querySelectorAll('[data-edge-from][data-intent-trace-match]').length,
-        overlays:svg.querySelectorAll('[data-intent-trace-overlay]').length,
-        directions:[...svg.querySelectorAll('.intent-trace-flow')].map(n=>n.getAttribute('data-direction')),
+        overlays:svg.querySelectorAll('[data-intent-trace-overlay]:not([data-label-light])').length,
+        directions:[...svg.querySelectorAll('.intent-trace-flow')].filter(n=>!n.closest('[data-label-light]')).map(n=>n.getAttribute('data-direction')),
         status:document.getElementById('intent-trace-status').textContent,
         focus:Archify.focus.active(),route:Archify.routeProbe.active(),owner:Archify.motionGovernor.owner(),
         errors:intentErrors,external:performance.getEntriesByType('resource').map(e=>e.name).filter(n=>/^https?:/.test(n))};
@@ -247,7 +247,7 @@ test('Intent Trace preserves input handoffs, transient geometry and cleanup', {
       const data={directions:shapes.map(n=>n.getAttribute('data-direction')),status:document.getElementById('intent-trace-status').textContent,
         transform:overlay.firstElementChild.getAttribute('transform'),d:shapes[0].getAttribute('d'),points:shapes[3].getAttribute('points'),
         stripped:!overlay.querySelector('[id],[style],[marker-end],[data-edge-from]'),pathLength:shapes.every(n=>n.getAttribute('pathLength')==='1'),
-        original:svg.querySelector('#original-path').outerHTML===original,beforeEdges:overlay.nextElementSibling.hasAttribute('data-edge-from')};
+        original:svg.querySelector('#original-path').outerHTML===original,aboveEdges:overlay.nextElementSibling===svg.querySelector('[data-node-id]')&&!svg.querySelector('[data-intent-trace-overlay] ~ [data-edge-from]')};
       Archify.intentTrace.show('solo',{announce:true});data.solo={active:Archify.intentTrace.active(),overlays:svg.querySelectorAll('[data-intent-trace-overlay]').length,status:document.getElementById('intent-trace-status').textContent};
       return data;
     })()`);
@@ -255,7 +255,7 @@ test('Intent Trace preserves input handoffs, transient geometry and cleanup', {
     assert.match(result.status, /Alpha/); assert.match(result.status, /1 outgoing/); assert.match(result.status, /1 incoming/);
     assert.match(result.status, /1 self loop/); assert.match(result.status, /3 connections/);
     assert.equal(result.transform, 'translate(3 4)'); assert.equal(result.d, 'M0 0 L10 10'); assert.equal(result.points, '1,2 3,4');
-    for (const flag of ['stripped', 'pathLength', 'original', 'beforeEdges']) assert.equal(result[flag], true, flag);
+    for (const flag of ['stripped', 'pathLength', 'original', 'aboveEdges']) assert.equal(result[flag], true, flag);
     assert.equal(result.solo.active, 'solo'); assert.equal(result.solo.overlays, 0);
     assert.match(result.solo.status, /0 connections/);
     await snapshot('geometry-fixture');

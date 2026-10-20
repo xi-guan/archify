@@ -3,12 +3,57 @@
        trace yields to the strongest semantic owner; Still also parks bounded
        viewer signals without discarding their static meaning.
        ============================================================ */
+    // a light the same colour as its line vanishes into it; the mark lets CSS burn its core white
+    Archify.flowContrast = function (light, line) {
+      var same = false;
+      try { same = getComputedStyle(light).stroke === getComputedStyle(line).stroke; } catch (_) {}
+      if (same) light.setAttribute('data-flow-contrast', '');
+      return same;
+    };
+    // a label mask cuts its line; a copy clipped to the mask, under the text, lets the light pass behind the words
+    Archify.labelLights = function (svg, overlay, lights) {
+      var same = function (a, b) { return ['a', 'b', 'c', 'd', 'e', 'f'].every(function (k) { return Math.abs(a[k] - b[k]) < 0.001; }); };
+      var copies = [];
+      Array.prototype.forEach.call(svg.querySelectorAll('[data-edge-from][data-edge-to] > rect.c-mask'), function (mask) {
+        var label = mask.parentNode;
+        var box = ['x', 'y', 'width', 'height'].map(function (name) { return mask.getAttribute(name); });
+        if (box.some(function (value) { return !value || !isFinite(Number(value)); })) return;
+        var origin = label.getCTM();
+        var own = lights.filter(function (pair) {
+          var edge = pair[1].closest('[data-edge-from][data-edge-to]');
+          var at = pair[1].parentNode.getCTM && pair[1].parentNode.getCTM();
+          return edge && origin && at && same(origin, at) &&
+            ['data-edge-from', 'data-edge-to', 'data-edge-key', 'data-edge-label'].every(function (name) {
+              return edge.getAttribute(name) === label.getAttribute(name);
+            });
+        });
+        if (!own.length) return;
+        var clip = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        Array.prototype.forEach.call(overlay.attributes, function (attr) { clip.setAttribute(attr.name, attr.value); });
+        ['x', 'y', 'width', 'height'].forEach(function (name, index) { clip.setAttribute(name, box[index]); });
+        clip.setAttribute('viewBox', box.join(' '));
+        clip.setAttribute('overflow', 'hidden');
+        clip.setAttribute('pointer-events', 'none');
+        clip.setAttribute('data-label-light', '');
+        own.forEach(function (pair) { clip.appendChild(pair[0].cloneNode(false)); });
+        label.insertBefore(clip, mask.nextSibling);
+        copies.push(clip);
+      });
+      return copies;
+    };
     Archify.motionGovernor = (function () {
       var STORAGE_KEY = 'archify-motion';
+      var SPEED_KEY = 'archify-motion-speed';
+      // duration multipliers; css scales every loop and hover light by --motion-tempo
+      var SPEEDS = { slow: 1.5, normal: 1, fast: 0.67 };
+      var SPEED_ORDER = ['slow', 'normal', 'fast'];
       var html = document.documentElement;
       var svg = document.querySelector('.diagram-container svg');
       var btn = document.getElementById('btn-motion');
       var label = document.getElementById('motion-label');
+      var speedBtn = document.getElementById('btn-motion-speed');
+      var speedLabel = document.getElementById('motion-speed-label');
+      var speed = 'normal';
       var motionQuery = window.matchMedia ? window.matchMedia('(prefers-reduced-motion: reduce)') : null;
       var capable = !!(svg && svg.getAttribute('data-animation') === 'trace');
       var readerPaused = false;
@@ -37,13 +82,17 @@
       var RELAY = {
         speed: 280,
         minTravel: 0.42,
+        walkTravel: 0.9,
         maxTravel: 1.5,
-        handoff: 0.1,
+        // the lit node holds ~500ms (after tempo) before the next light leaves
+        handoff: 0.34,
         dwell: 0.55,
         maxSpan: 9,
         land: 0.9,
         rest: 1.4,
-        minCycle: 3.6
+        minCycle: 3.6,
+        // keyframes are cycle percentages, so stretching the cycle and delays slows every layer alike
+        tempo: 1.5
       };
       function stepOf(element, fallback) {
         var step = parseFloat(element && element.style ? element.style.getPropertyValue('--step') : '');
@@ -96,7 +145,7 @@
           record.depart = arrive[record.from] + (seeded[record.from] ? 0 : RELAY.handoff);
           record.active = true;
         });
-        Object.keys(arrive).forEach(function (id) { addWindow(windows, id, arrive[id], arrive[id]); });
+        Object.keys(arrive).forEach(function (id) { addWindow(windows, id, arrive[id], arrive[id] + (seeded[id] ? 0 : RELAY.handoff)); });
       }
       function planWalk(records, windows) {
         // A state machine is in one state at a time: follow the first authored
@@ -113,6 +162,8 @@
         for (var hops = 0; hops < 16; hops += 1) {
           var next = ordered.find(function (record) { return record.from === current && !visited[record.to]; });
           if (!next) break;
+          // one token is the whole story, so it crosses short transitions slowly enough to follow
+          next.travel = Math.max(next.travel, RELAY.walkTravel);
           next.active = true;
           next.depart = clock + RELAY.dwell;
           addWindow(windows, current, enteredAt, next.depart, true);
@@ -146,12 +197,17 @@
         });
         return span * scale;
       }
+      // a filter on the translucent card shows through its own fill, so the opaque backing mask glows instead
+      function glowTarget(shape) {
+        var mask = shape.previousElementSibling;
+        return mask && mask.classList.contains('c-mask') && shape.parentNode.hasAttribute('data-node-id') ? mask : shape;
+      }
       function nodeShapes() {
         var shapes = Object.create(null);
         Array.prototype.forEach.call(svg.querySelectorAll('[data-animate="node"]'), function (shape) {
           var wrapper = shape.closest('[data-node-id]');
           var id = wrapper ? wrapper.getAttribute('data-node-id') : '';
-          if (id) (shapes[id] = shapes[id] || []).push(shape);
+          if (id) (shapes[id] = shapes[id] || []).push(glowTarget(shape));
         });
         return shapes;
       }
@@ -266,10 +322,11 @@
           var travel = record.travel;
           rules.push(
             '@keyframes archify-relay-comet-' + record.index + ' {',
-            '  0% { stroke-dashoffset: calc(var(--flow-len, 0px) + var(--flow-shift, 0px)); opacity: 0; ' + ease + ' }',
+            // the comet's gap outruns the path, so one dash travels instead of a second copy wrapping in at the source
+            '  0% { stroke-dashoffset: var(--flow-shift, 0px); opacity: 0; ' + ease + ' }',
             '  ' + at(Math.min(0.12, travel * 0.2)) + ' { opacity: var(--flow-peak, 0.9); }',
-            '  ' + at(travel) + ' { stroke-dashoffset: var(--flow-shift, 0px); opacity: var(--flow-peak, 0.9); }',
-            '  ' + at(travel + 0.16) + ', 100% { stroke-dashoffset: var(--flow-shift, 0px); opacity: 0; }',
+            '  ' + at(travel) + ' { stroke-dashoffset: calc(var(--flow-shift, 0px) - var(--flow-len, 0px)); opacity: var(--flow-peak, 0.9); }',
+            '  ' + at(travel + 0.16) + ', 100% { stroke-dashoffset: calc(var(--flow-shift, 0px) - var(--flow-len, 0px)); opacity: 0; }',
             '}',
             // A solid wake draws the travelled path behind the head on the same
             // easing; a dashed wake only brightens its authored segments.
@@ -398,10 +455,10 @@
           var headLen = Math.min(14, Math.max(7, len * 0.03));
           var haloLen = Math.min(22, Math.max(12, len * 0.07));
           var trail = len >= 120
-            ? { pattern: '2.5 2 4 3 5.5 4.5 8 ' + (len - 30).toFixed(1), length: 30 }
+            ? { pattern: '2.5 2 4 3 5.5 4.5 8 ' + (len * 2).toFixed(1), length: 30 }
             : (len >= 60
-              ? { pattern: '3 3 7 ' + (len - 13).toFixed(1), length: 13 }
-              : { pattern: '5 ' + Math.max(4, len - 5).toFixed(1), length: 5 });
+              ? { pattern: '3 3 7 ' + (len * 2).toFixed(1), length: 13 }
+              : { pattern: '5 ' + (len * 2).toFixed(1), length: 5 });
           record.layers.push(
             { flow: wake, kind: 'wake', dash: len, shift: 0 },
             { flow: addPath('glow'), kind: 'comet', dash: haloLen, shift: (haloLen - headLen) / 2 },
@@ -409,6 +466,8 @@
             { flow: addPath('tail'), kind: 'comet', dash: trail.length, shift: trail.length - headLen, dasharray: trail.pattern },
             { flow: addPath('head'), kind: 'comet', dash: headLen, shift: 0 }
           );
+          // the wake carries the comet's base colour; the head and tail are tinted from it
+          if (Archify.flowContrast(wake, shape)) record.layers.forEach(function (layer) { layer.flow.setAttribute('data-flow-contrast', ''); });
           if (choreography === 'stream') {
             // A packet train behind the comet reads as a continuous stream.
             [1, 2, 3].forEach(function (order) {
@@ -455,21 +514,21 @@
         if (!active.length && !extras.length) return;
         var cycle = Math.max(RELAY.minCycle, span + RELAY.land + RELAY.rest);
         writeKeyframes(active, windows, extras, cycle);
-        svg.style.setProperty('--flow-cycle', cycle.toFixed(3) + 's');
-        html.style.setProperty('--flow-cycle-chrome', cycle.toFixed(3) + 's');
+        svg.style.setProperty('--flow-cycle', (cycle * RELAY.tempo).toFixed(3) + 's');
+        html.style.setProperty('--flow-cycle-chrome', (cycle * RELAY.tempo).toFixed(3) + 's');
         active.forEach(function (record) {
           var gap = Math.min(0.22, record.travel * 0.28);
           record.layers.forEach(function (layer) {
             var flow = layer.flow;
             flow.style.setProperty('--flow-len', record.len.toFixed(1) + 'px');
-            flow.style.setProperty('--flow-delay', (record.depart + (layer.packet || 0) * gap).toFixed(3) + 's');
+            flow.style.setProperty('--flow-delay', ((record.depart + (layer.packet || 0) * gap) * RELAY.tempo).toFixed(3) + 's');
             flow.style.setProperty('--flow-dash', layer.dash.toFixed(1) + 'px');
             flow.style.setProperty('--flow-shift', layer.shift.toFixed(1) + 'px');
             flow.style.setProperty('--flow-name', 'archify-relay-' + layer.kind + '-' + record.index);
             if (layer.dasharray) flow.style.setProperty('--flow-dasharray', layer.dasharray);
           });
           if (record.ripple) {
-            record.ripple.style.setProperty('--flow-delay', (record.depart + record.travel).toFixed(3) + 's');
+            record.ripple.style.setProperty('--flow-delay', ((record.depart + record.travel) * RELAY.tempo).toFixed(3) + 's');
             record.ripple.style.setProperty('--flow-name', 'archify-relay-ripple');
           }
         });
@@ -503,6 +562,10 @@
         } else if (!entryStarted) {
           entryStarted = true;
           entryPending = new Set(Array.prototype.slice.call(svg.querySelectorAll('[data-animate="node"]')));
+          entryPending.forEach(function (shape) {
+            var mask = glowTarget(shape);
+            if (mask !== shape) mask.style.setProperty('--step', shape.style.getPropertyValue('--step') || '0');
+          });
           if (!entryPending.size) settleEntry();
           else {
             svg.addEventListener('animationend', onEntryBoundary, true);
@@ -520,6 +583,27 @@
           if (readerPaused) localStorage.removeItem(STORAGE_KEY);
           else localStorage.setItem(STORAGE_KEY, 'live');
         } catch (_) {}
+      }
+      function readSpeed() {
+        var stored = null;
+        try { stored = localStorage.getItem(SPEED_KEY); } catch (_) {}
+        return Object.prototype.hasOwnProperty.call(SPEEDS, stored) ? stored : 'normal';
+      }
+      function setSpeed(next) {
+        speed = Object.prototype.hasOwnProperty.call(SPEEDS, next) ? next : 'normal';
+        try {
+          if (speed === 'normal') localStorage.removeItem(SPEED_KEY);
+          else localStorage.setItem(SPEED_KEY, speed);
+        } catch (_) {}
+        renderSpeed();
+        return speed;
+      }
+      function renderSpeed() {
+        var name = viewerText('viewer.motion.speed.' + speed);
+        html.style.setProperty('--motion-tempo', String(SPEEDS[speed]));
+        speedLabel.textContent = name;
+        speedBtn.setAttribute('aria-label', viewerText('viewer.motion.speed', { speed: name }));
+        speedBtn.title = viewerText('viewer.motion.speed', { speed: name });
       }
       function reducedMotion() {
         return !!(motionQuery && motionQuery.matches);
@@ -547,6 +631,7 @@
         renderAmbient(paused || owner || html.hasAttribute('data-embed') || html.hasAttribute('data-share-playback') || html.hasAttribute('data-document-hidden'));
         btn.setAttribute('aria-pressed', paused ? 'false' : 'true');
         btn.disabled = systemPaused;
+        speedBtn.disabled = systemPaused;
         label.textContent = viewerText(paused ? 'viewer.motion.still' : 'viewer.motion.live');
         if (paused && lastEffectivePaused !== true && Archify.routeProbe && Archify.routeProbe.isJourneyPlaying && Archify.routeProbe.isJourneyPlaying()) {
           Archify.routeProbe.pauseJourney({ preserveElapsed: true, reason: systemPaused ? 'reduced-motion' : (hasSuspension() ? 'hidden' : 'still') });
@@ -645,6 +730,7 @@
 
       if (!capable) {
         btn.hidden = true;
+        speedBtn.hidden = true;
         html.removeAttribute('data-motion-capable');
         html.removeAttribute('data-motion');
         html.removeAttribute('data-motion-owner');
@@ -670,6 +756,12 @@
       btn.hidden = false;
       readerPaused = readStored() !== 'live';
       btn.addEventListener('click', function () { setPaused(!readerPaused); });
+      speedBtn.hidden = false;
+      speed = readSpeed();
+      renderSpeed();
+      speedBtn.addEventListener('click', function () {
+        setSpeed(SPEED_ORDER[(SPEED_ORDER.indexOf(speed) + 1) % SPEED_ORDER.length]);
+      });
       if (motionQuery) {
         if (typeof motionQuery.addEventListener === 'function') motionQuery.addEventListener('change', render);
         else if (typeof motionQuery.addListener === 'function') motionQuery.addListener(render);

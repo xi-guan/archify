@@ -5,7 +5,6 @@ import {
   animateAttr,
   focusEdgeAttrs,
   focusNodeAttrs,
-  focusNodeTitle,
   loadDiagram,
   svgAccessibleText,
   svgRootAttrs,
@@ -952,7 +951,6 @@ function renderType(type) {
   const italic = type.kind === 'abstract' ? ' font-style="italic"' : '';
   const r = 8;
   return `        <g ${focusNodeAttrs(type.id, type.label, passport, locale)} data-class-kind="${esc(type.kind)}" class="cl-hue-${tone}">
-          ${focusNodeTitle(type.label, passport)}
           <rect x="${type.x}" y="${type.y}" width="${type.width}" height="${type.height}" rx="${r}" class="c-mask"/>
           <rect x="${type.x}" y="${type.y}" width="${type.width}" height="${type.height}" rx="${r}" class="c-${tone} cl-type"${animateAttr(cd.meta, 'node', typeSteps.get(type.id))} stroke-width="1.2"/>
           <path class="cl-header c-${tone}" stroke="none" d="M ${type.x + r} ${type.y} H ${type.x + type.width - r} A ${r} ${r} 0 0 1 ${type.x + type.width} ${type.y + r} V ${type.y + header} H ${type.x} V ${type.y + r} A ${r} ${r} 0 0 1 ${type.x + r} ${type.y} Z"/>

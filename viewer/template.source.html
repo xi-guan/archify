@@ -18,6 +18,25 @@
           if (new URLSearchParams(window.location.search).get('embed') === '1') {
             document.documentElement.setAttribute('data-embed', 'true');
           }
+          if (new URLSearchParams(window.location.search).get('frameless') === '1') {
+            document.documentElement.setAttribute('data-frameless', 'true');
+            document.addEventListener('DOMContentLoaded', function () {
+              var params = new URLSearchParams(window.location.search);
+              var back = params.get('back');
+              if (!back) return;
+              // only relative links or same-origin http(s); rejects javascript: and other schemes
+              var relative = !/^[a-z][a-z0-9+.-]*:/i.test(back) && !/^[\\/]{2}/.test(back);
+              var url = new URL(back, window.location.href);
+              if (!relative && (!/^https?:$/.test(url.protocol) || url.origin !== window.location.origin)) return;
+              var link = document.createElement('a');
+              link.className = 'archify-back';
+              link.href = relative ? back : url.href;
+              link.target = '_top';
+              link.textContent = '← ' + (params.get('back_label') || 'Back');
+              var row = document.querySelector('.header-row');
+              if (row) row.insertBefore(link, row.firstChild);
+            });
+          }
           if (new URLSearchParams(window.location.search).get('present') === '1') {
             document.documentElement.setAttribute('data-present', 'true');
           }
@@ -225,6 +244,11 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
             aria-pressed="true">
       <span class="motion-control-dot" aria-hidden="true"></span>
       <span id="motion-label">{{i18n:viewer.motion.live}}</span>
+    </button>
+    <button id="btn-motion-speed" type="button" hidden
+            title="{{i18n:viewer.motion.speed.normal}}"
+            aria-label="{{i18n:viewer.motion.speed.normal}}">
+      <span id="motion-speed-label">{{i18n:viewer.motion.speed.normal}}</span>
     </button>
     <button id="btn-present" type="button"
             title="{{i18n:viewer.present.enter.title}}"
@@ -738,7 +762,7 @@ OTHER DEALINGS IN THE FONT SOFTWARE.
         ? [element]
         : Array.prototype.slice.call(element.querySelectorAll('path, line, polyline'));
       return geometries.some(function (geometry) {
-        if (geometry.hasAttribute('data-ambient-flow-overlay')) return false;
+        if (geometry.hasAttribute('data-ambient-flow-overlay') || geometry.closest('[data-label-light]')) return false;
         var source = geometry.tagName.toLowerCase() === 'path'
           ? geometry.getAttribute('d')
           : geometry.tagName.toLowerCase() === 'polyline'

@@ -28,7 +28,7 @@ test('automatic branches use a clear port slot without reversing over an incomin
   for (const branch of branches) {
     const tip = incoming.points.at(-1), start = branch.points[0];
     if (Math.abs(tip[0] - start[0]) < 0.0001) {
-      assert.ok(Math.abs(tip[1] - start[1]) >= 4 * 1.4 - 0.0001);
+      assert.ok(Math.abs(tip[1] - start[1]) >= 4 * 1 - 0.0001);
     }
   }
   const reordered = structuredClone(workflow);

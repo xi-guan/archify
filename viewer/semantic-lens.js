@@ -61,7 +61,7 @@
       function edgeShapes(edge) {
         if (!edge) return [];
         if (/^(path|line|polyline)$/i.test(edge.tagName || '')) return [edge];
-        return Array.prototype.slice.call(edge.querySelectorAll('path:not([data-ambient-flow-overlay]), line, polyline'));
+        return Array.prototype.slice.call(edge.querySelectorAll('path:not([data-ambient-flow-overlay]):not([data-label-light] *), line:not([data-label-light] *), polyline:not([data-label-light] *)'));
       }
       function legendSourceBounds(entry) {
         var bounds = null;
@@ -270,13 +270,16 @@
         overlay.setAttribute('class', 'semantic-lens-overlay');
         overlay.setAttribute('data-semantic-lens-overlay', '');
         overlay.setAttribute('aria-hidden', 'true');
+        var lights = [];
         entries.forEach(function (entry, step) {
           var wrapper = document.createElementNS(namespace, 'g');
           if (entry.edge.members[0].hasAttribute('transform')) {
             wrapper.setAttribute('transform', entry.edge.members[0].getAttribute('transform'));
           }
           edgeShapes(entry.edge.members[0]).forEach(function (shape) {
-            wrapper.appendChild(flowGeometry(shape, entry.direction, step));
+            var light = flowGeometry(shape, entry.direction, step);
+            lights.push([light, shape]);
+            wrapper.appendChild(light);
           });
           if (wrapper.childNodes.length) overlay.appendChild(wrapper);
         });
@@ -284,6 +287,8 @@
         var firstNode = svg.querySelector('[data-node-id]');
         if (firstNode) svg.insertBefore(overlay, firstNode);
         else svg.appendChild(overlay);
+        lights.forEach(function (pair) { Archify.flowContrast(pair[0], pair[1]); });
+        Archify.labelLights(svg, overlay, lights);
         return true;
       }
       function cleanSvgState() {

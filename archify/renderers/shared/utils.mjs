@@ -10,20 +10,23 @@ export { esc };
 
 // `extra` appends type-owned definitions (the entity renderer's cardinality
 // markers) inside the same <defs>. Callers that pass nothing keep the exact
-// bytes the five longer-standing renderers already emit.
-export function renderDefinitions(extra = '') {
+// bytes the five longer-standing renderers already emit. `fixedArrowheads`
+// keeps arrowheads 10 units long whatever the stroke, so a bend just before
+// the target stays visible.
+export function renderDefinitions(extra = '', { fixedArrowheads = false } = {}) {
+  const units = fixedArrowheads ? ' markerUnits="userSpaceOnUse"' : '';
   return `        <!-- Definitions -->
         <defs>
-          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"${units}>
             <polygon points="0 0, 10 3.5, 0 7" class="m-default" />
           </marker>
-          <marker id="arrowhead-emphasis" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <marker id="arrowhead-emphasis" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"${units}>
             <polygon points="0 0, 10 3.5, 0 7" class="m-emphasis" />
           </marker>
-          <marker id="arrowhead-security" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <marker id="arrowhead-security" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"${units}>
             <polygon points="0 0, 10 3.5, 0 7" class="m-security" />
           </marker>
-          <marker id="arrowhead-dashed" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+          <marker id="arrowhead-dashed" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"${units}>
             <polygon points="0 0, 10 3.5, 0 7" class="m-dashed" />
           </marker>
           <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">

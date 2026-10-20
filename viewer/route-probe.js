@@ -104,7 +104,7 @@
       }
       function edgeShapes(edge) {
         if (/^(path|line|polyline)$/i.test(edge.tagName)) return [edge];
-        return Array.prototype.slice.call(edge.querySelectorAll('path:not([data-ambient-flow-overlay]), line, polyline'));
+        return Array.prototype.slice.call(edge.querySelectorAll('path:not([data-ambient-flow-overlay]):not([data-label-light] *), line:not([data-label-light] *), polyline:not([data-label-light] *)'));
       }
       function removeOverlay() {
         Array.prototype.forEach.call(svg.querySelectorAll('[data-route-probe-overlay]'), function (overlay) {
@@ -365,15 +365,21 @@
         overlay.setAttribute('class', 'route-probe-overlay');
         overlay.setAttribute('data-route-probe-overlay', '');
         overlay.setAttribute('aria-hidden', 'true');
+        var lights = [];
         routeEdges.forEach(function (edge, step) {
           var wrapper = document.createElementNS(namespace, 'g');
           if (edge.hasAttribute('transform')) wrapper.setAttribute('transform', edge.getAttribute('transform'));
-          edgeShapes(edge).forEach(function (shape) { wrapper.appendChild(traceGeometry(shape, step)); });
+          edgeShapes(edge).forEach(function (shape) {
+            var light = traceGeometry(shape, step);
+            lights.push([light, shape]);
+            wrapper.appendChild(light);
+          });
           if (wrapper.childNodes.length) overlay.appendChild(wrapper);
         });
         var firstNode = svg.querySelector('[data-node-id]');
         if (firstNode) svg.insertBefore(overlay, firstNode);
         else svg.appendChild(overlay);
+        Archify.labelLights(svg, overlay, lights);
       }
       function journeyButtons() {
         return Array.prototype.slice.call(path.querySelectorAll('[data-route-journey-index]'));
@@ -470,12 +476,18 @@
         overlay.setAttribute('aria-hidden', 'true');
         var wrapper = document.createElementNS(namespace, 'g');
         if (edge.hasAttribute('transform')) wrapper.setAttribute('transform', edge.getAttribute('transform'));
-        edgeShapes(edge).forEach(function (shape) { wrapper.appendChild(journeyGeometry(shape)); });
+        var lights = [];
+        edgeShapes(edge).forEach(function (shape) {
+          var light = journeyGeometry(shape);
+          lights.push([light, shape]);
+          wrapper.appendChild(light);
+        });
         if (!wrapper.childNodes.length) return false;
         overlay.appendChild(wrapper);
         var firstNode = svg.querySelector('[data-node-id]');
         if (firstNode) svg.insertBefore(overlay, firstNode);
         else svg.appendChild(overlay);
+        Archify.labelLights(svg, overlay, lights);
         if (Archify.motionGovernor && Archify.motionGovernor.capable) {
           var token = 0;
           token = Archify.motionGovernor.claim('route', function () {

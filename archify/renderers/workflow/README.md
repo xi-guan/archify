@@ -159,6 +159,7 @@ a verified migration-to-v2 repair; v1 never falls through to adaptive layout.
 | Implicit viewBox | intrinsic content bounds plus contract padding |
 | Explicit viewBox | containment capacity; too-small input reports exact `requiredViewBox` and contributors |
 | Lane measurement | A same-column vertical stack (two or more distinct `yOffset` values) opts an implicit, unpinned workflow into per-lane measurement. Explicit `meta.viewBox`, `via`, `labelAt`, `channelX`, or `channelY`, and workflows without a stack retain shared-height v2 geometry for compatibility. |
+| Centered lanes | Optional `meta.centered_lanes: true` adds a 30px empty band under each lane's nodes, matching the title band, so nodes sit in the lane's vertical middle. Off by default; lanes grow taller. |
 
 Unpinned v2 drafts reserve 32px between overlapping same-lane nodes for routes,
 and omitted node widths may grow from 92px to 200px to fit their text. Documents

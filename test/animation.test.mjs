@@ -169,9 +169,10 @@ for (const [mode, example] of Object.entries(CASES)) {
     assert.match(svg, /<svg[^>]+data-animation="trace"/);
     assert.match(svg, /data-animate="edge" style="--step:0"/);
     assert.match(svg, /data-animate="node" style="--step:0"/);
-    assert.match(svg, /aria-labelledby="archify-diagram-title archify-diagram-description"/);
-    assert.match(svg, /<title id="archify-diagram-title">[^<]+<\/title>/);
+    assert.match(svg, /aria-label="[^"]+" aria-describedby="archify-diagram-description"/);
     assert.match(svg, /<desc id="archify-diagram-description">[^<]+<\/desc>/);
+    // any <title> inside the SVG would raise a native hover tooltip over the diagram
+    assert.doesNotMatch(svg, /<title\b/);
     assert.match(svg, /id="node-[^"]+" data-node-id="[^"]+"[^>]+role="button"[^>]+aria-pressed="false"/);
     assert.match(svg, /data-edge-from="[^"]+" data-edge-to="[^"]+"/);
   });
@@ -193,6 +194,19 @@ test('Live relay ships comet layers whose timing the Motion Governor plans', () 
   assert.match(html, /--flow-cycle: 6\.4s/);
   assert.match(html, /html\[data-theme="light"\] svg\[data-animation="trace"\] \{/);
   assert.match(html, /html\[data-theme="light"\] \.ambient-flow-head \{/);
+  // ?frameless=1 drops the frame and load zoom, and only then honours a safe back link
+  assert.match(html, /get\('frameless'\) === '1'\) \{\s*document\.documentElement\.setAttribute\('data-frameless', 'true'\)/);
+  assert.match(html, /html\[data-frameless="true"\] \.diagram-container \{ border: 0; border-radius: 0; box-shadow: none; \}/);
+  assert.match(html, /html\[data-frameless="true"\] \.diagram-container svg \{ transition: none; \}/);
+  assert.match(html, /setAttribute\('data-frameless', 'true'\);\s*document\.addEventListener\('DOMContentLoaded'/);
+  assert.match(html, /if \(!relative && \(!\/\^https\?:\$\/\.test\(url\.protocol\) \|\| url\.origin !== window\.location\.origin\)\) return;/);
+  assert.match(html, /link\.textContent = /);
+  // a relay hop holds on the lit node ~500ms (0.34 x tempo 1.5) before the next light leaves
+  assert.match(html, /handoff: 0\.34,/);
+  assert.match(html, /tempo: 1\.5/);
+  // a comet gap shorter than the path wraps a second copy in at the source on arrival
+  assert.doesNotMatch(html, /calc\(var\(--flow-len, 0px\) - var\(--flow-dash/);
+  assert.match(html, /stroke-dasharray: var\(--flow-dash, 6px\) calc\(var\(--flow-len, 0px\) \* 2\);/);
   // Per-edge keyframes come from the planned relay; no fixed shared-cycle
   // cascade, echo comet or load-time trace layer remains.
   assert.match(html, /function planRelay\(records, windows\)/);
