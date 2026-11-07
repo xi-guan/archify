@@ -1490,8 +1490,10 @@ ${edge}
       const { width: labelW, height: labelH } = rect || flowLabelSize(flow);
       const lines = rect?.lines;
       const text = lines ? lines.map((line, i) => `<tspan x="${lx}" dy="${i ? 11 : 0}">${esc(line)}</tspan>`).join('') : esc(flow.label);
+      // fork: the plate keeps room for this line, so hiding it below full zoom leaves the label floating
+      const classificationDetail = isClassicStyle() ? ' data-detail="fine"' : '';
       const classification = flow.classification
-        ? `\n        <text data-detail="fine" x="${lx}" y="${ly + 11 * (lines?.length || 1)}" class="t-dim" font-size="7" text-anchor="middle">${esc(flow.classification)}</text>`
+        ? `\n        <text${classificationDetail} x="${lx}" y="${ly + 11 * (lines?.length || 1)}" class="t-dim" font-size="7" text-anchor="middle">${esc(flow.classification)}</text>`
         : '';
       return `        <g data-detail="context" ${focusEdgeAttrs(flow.from, flow.to, flow.label, index, flow.id)}>
           <rect x="${lx - labelW / 2}" y="${ly - 11}" width="${labelW}" height="${labelH}" rx="4" class="c-mask"/>

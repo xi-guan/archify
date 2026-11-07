@@ -221,6 +221,22 @@ test('dataflow lines drawn differently into one node never share a trunk; classi
   assert.equal(classicPlain, classicSecret);
 });
 
+test('a dataflow label second line shows whenever its label does; classic hides it until full zoom', () => {
+  const source = {
+    schema_version: 1, diagram_type: 'dataflow',
+    meta: { title: 'Fork label lines', output: 'diagram.html' },
+    stages: [{ label: 'In' }, { label: 'Out' }],
+    nodes: [
+      { id: 'a', type: 'backend', label: 'A', stage: 0, row: 0 },
+      { id: 'b', type: 'database', label: 'B', stage: 1, row: 0 },
+    ],
+    flows: [{ id: 'ab', from: 'a', to: 'b', label: 'plain', classification: 'every 3 minutes' }],
+  };
+  const line = (env) => render(source, env, 'dataflow').match(/<text [^>]*>every 3 minutes<\/text>/)[0];
+  assert.doesNotMatch(line(), /data-detail/);
+  assert.match(line(classic), /data-detail="fine"/);
+});
+
 test('the viewer template keeps the frameless mode, safe back link, relay hold and comet wrap', () => {
   const html = fs.readFileSync(path.join(repoRoot, 'archify/assets/template.html'), 'utf8');
   // ?frameless=1 drops the frame and load zoom, and only then honours a safe back link
