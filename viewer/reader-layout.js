@@ -350,13 +350,16 @@
         var mode = null;
         // Notes default below the diagram; the right rail is the reader's
         // opt-in and needs a wide viewport.
-        if (hasCards() && (readPreference(RAIL_PLACEMENT_KEY) !== 'right' || window.innerWidth < RAIL_MIN_VIEWPORT)) {
+        // fork: notes default to an open right rail, so the spare width beside a height-bound diagram holds them
+        var forkRail = html.hasAttribute('data-fork-style');
+        var placement = readPreference(RAIL_PLACEMENT_KEY) || (forkRail ? 'right' : null);
+        if (hasCards() && (placement !== 'right' || window.innerWidth < RAIL_MIN_VIEWPORT)) {
           mode = 'bottom';
         } else if (hasCards()) {
           var fitsReadable = readableMinimumWidth + railExtra <= maxWidth;
           var comfortWidth = labelWidth(RAIL_COMFORT_PRIMARY_PX);
           var comfortable = fitsReadable && (!comfortWidth || comfortWidth + chrome.diagramX + railExtra <= maxWidth);
-          var collapsedPreference = readPreference(RAIL_COLLAPSED_KEY);
+          var collapsedPreference = readPreference(RAIL_COLLAPSED_KEY) || (forkRail ? '0' : null);
           if (collapsedPreference === '1' || (collapsedPreference !== '0' && !comfortable)) mode = 'collapsed';
           else mode = fitsReadable ? 'true' : 'overlay';
         }

@@ -47,4 +47,5 @@ export const browserTestFiles = [
   'header-dock-browser.test.mjs',
   'fork-export-browser.test.mjs',
   'fork-highlight-browser.test.mjs',
+  'fork-rail-browser.test.mjs',
 ];
