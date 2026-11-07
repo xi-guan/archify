@@ -371,9 +371,9 @@ function messageGeometry(message) {
   return { start, end, center: (start + end) / 2 };
 }
 
-// fork: the label background ends 4 above the line so it clears the 3.42 arrowhead wing under it
+// fork: the label background ends 5.5 above the line so it clears the 4.79 arrowhead wing under it
 function messageLabelTop(message) {
-  return message.y - (isClassicStyle() ? 20 : Math.max(20, layout.labelH + 4));
+  return message.y - (isClassicStyle() ? 20 : Math.max(20, layout.labelH + 5.5));
 }
 
 function messageLabelBox(message, relationIndex = null) {

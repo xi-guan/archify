@@ -25,18 +25,22 @@ export function renderDefinitions(extra = '', { fixedArrowheads = false } = {}) 
   const head = isClassicStyle()
     ? '0 0, 10 3.5, 0 7'
     : '6.42 0.08, 9.85 3.5, 6.42 6.92, 5.58 6.08, 8.15 3.5, 5.58 0.92';
+  // fork: the chevron is drawn in the 10x7 box and shown ARROW_SCALE larger
+  const box = isClassicStyle()
+    ? 'markerWidth="10" markerHeight="7"'
+    : `markerWidth="${Math.round(100 * ARROW_SCALE) / 10}" markerHeight="${Math.round(70 * ARROW_SCALE) / 10}" viewBox="0 0 10 7"`;
   return `        <!-- Definitions -->
         <defs>
-          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"${units}>
+          <marker id="arrowhead" ${box} refX="9" refY="3.5" orient="auto"${units}>
             <polygon points="${head}" class="m-default" />
           </marker>
-          <marker id="arrowhead-emphasis" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"${units}>
+          <marker id="arrowhead-emphasis" ${box} refX="9" refY="3.5" orient="auto"${units}>
             <polygon points="${head}" class="m-emphasis" />
           </marker>
-          <marker id="arrowhead-security" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"${units}>
+          <marker id="arrowhead-security" ${box} refX="9" refY="3.5" orient="auto"${units}>
             <polygon points="${head}" class="m-security" />
           </marker>
-          <marker id="arrowhead-dashed" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"${units}>
+          <marker id="arrowhead-dashed" ${box} refX="9" refY="3.5" orient="auto"${units}>
             <polygon points="${head}" class="m-dashed" />
           </marker>
           <pattern id="grid" width="40" height="40" patternUnits="userSpaceOnUse">
@@ -163,10 +167,12 @@ const TEMPLATE_PLACEHOLDERS = [
 // fork: viewer/fork.css as inlined by generate-viewer; classic pages can never match it, so they drop it
 const FORK_CSS_RE = /[ \t]*\/\* fork style \(archify-design v3\)[\s\S]*?\/\* fork style end \*\/\r?\n/;
 
-// fork: the fixed chevron tip reaches 0.85 past the line end and fork.css draws card borders 1.25 wide
-const ARROW_TIP_TRIM = 0.85 + 1.25 / 2;
-// fork: the chevron's arms start 3.42 back from its tip
-const ARROW_HEAD_DEPTH = 3.42;
+// fork: 1.4 keeps the chevron as large as upstream's triangle on a 1.4-wide line
+const ARROW_SCALE = 1.4;
+// fork: the fixed chevron tip reaches 0.85 box units past the line end and fork.css draws card borders 1.25 wide
+const ARROW_TIP_TRIM = 0.85 * ARROW_SCALE + 1.25 / 2;
+// fork: the chevron's arms start 3.42 box units back from its tip
+const ARROW_HEAD_DEPTH = 3.42 * ARROW_SCALE;
 
 // fork: lines ended on the card border's centre so the card hid the chevron tip; end them where the tip meets the border's outer edge, comet where the chevron starts
 function clearArrowTips(svg) {

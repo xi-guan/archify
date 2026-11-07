@@ -3,7 +3,7 @@
 [data-fork-style][data-preset="classic"][data-theme="light"] {
   --bg: #f4f5f7; --grid: #e9edf2; --canvas-dot: #e2e7ec; --panel: #ffffff; --panel-border: #e5e7eb; --mask: #ffffff;
   --text: #111827; --text-muted: #475569; --text-dim: #606b7d;
-  --lane-fill: rgba(15, 23, 42, 0.035); --lane-stroke: #cbd5e1;
+  --lane-fill: rgba(248, 250, 252, 0.65); --lane-stroke: #cbd5e1;
   --arrow: #64748b; --arrow-emphasis: #1e293b; --arrow-security: #9f1239; --arrow-dashed: #64748b;
   --arrow-label: #475569; --arrow-emphasis-label: #1e293b; --arrow-security-label: #881337; --arrow-dashed-label: #475569;
   --signal: #d946ef; --signal-head: #a21caf;
@@ -45,10 +45,10 @@
 [data-fork-style][data-preset="classic"] { --fork-trace-add: 0px; }
 
 /* four line kinds; highlights add 1 through --fork-trace-add, so each kind keeps its own base width */
-html[data-fork-style][data-preset="classic"] .diagram-container svg :is(path, line, polyline).a-default  { stroke: var(--arrow); stroke-width: calc(1.25px + var(--fork-trace-add)); stroke-linecap: round; }
-html[data-fork-style][data-preset="classic"] .diagram-container svg :is(path, line, polyline).a-emphasis { stroke: var(--arrow-emphasis); stroke-width: calc(1.75px + var(--fork-trace-add)); stroke-linecap: round; }
-html[data-fork-style][data-preset="classic"] .diagram-container svg :is(path, line, polyline).a-security { stroke: var(--arrow-security); stroke-width: calc(1.75px + var(--fork-trace-add)); stroke-dasharray: 0 5; stroke-linecap: round; }
-html[data-fork-style][data-preset="classic"] .diagram-container svg :is(path, line, polyline).a-dashed   { stroke: var(--arrow-dashed); stroke-width: calc(1.25px + var(--fork-trace-add)); stroke-dasharray: 6 4; stroke-linecap: round; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg :is(path, line, polyline).a-default  { stroke: var(--arrow); stroke-width: calc(1px + var(--fork-trace-add)); stroke-linecap: round; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg :is(path, line, polyline).a-emphasis { stroke: var(--arrow-emphasis); stroke-width: calc(1.25px + var(--fork-trace-add)); stroke-linecap: round; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg :is(path, line, polyline).a-security { stroke: var(--arrow-security); stroke-width: calc(1.25px + var(--fork-trace-add)); stroke-dasharray: 0 5; stroke-linecap: round; }
+html[data-fork-style][data-preset="classic"] .diagram-container svg :is(path, line, polyline).a-dashed   { stroke: var(--arrow-dashed); stroke-width: calc(1px + var(--fork-trace-add)); stroke-dasharray: 6 4; stroke-linecap: round; }
 html[data-fork-style][data-preset="classic"] .diagram-container svg .m-default  { fill: var(--arrow); }
 html[data-fork-style][data-preset="classic"] .diagram-container svg .m-emphasis { fill: var(--arrow-emphasis); }
 html[data-fork-style][data-preset="classic"] .diagram-container svg .m-security { fill: var(--arrow-security); }
@@ -149,8 +149,8 @@ html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg[
 html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg[data-motion-choreography="sequence"] > rect.c-mask { rx: 3px; }
 html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg[data-motion-choreography="sequence"] :is([data-edge-from], [data-legend-kind], [data-legend-semantic-kind]) > path.a-default[stroke-dasharray] { stroke: var(--arrow-dashed); stroke-width: calc(1.25px + var(--fork-trace-add)); stroke-dasharray: 6 4; }
 
-/* edge labels sit in a mask capsule with a hairline border; rx 8 = half the 16-high label (rx alone would turn a long box into an ellipse); sequence message names stay unboxed */
-html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg [data-edge-from] > rect.c-mask { fill: var(--mask); stroke: var(--lane-stroke); stroke-width: 1; rx: 8px; }
+/* edge labels sit in a borderless mask capsule; rx 8 = half the 16-high label (rx alone would turn a long box into an ellipse); sequence message names stay unboxed */
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg [data-edge-from] > rect.c-mask { fill: var(--mask); stroke: none; rx: 8px; }
 
 /* legend: 3-radius swatches with the card border, neutral count chips */
 html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg [data-legend] :is([data-legend-kind], [data-legend-semantic-kind]) > :is(rect[class="c-frontend"], rect[class="c-backend"], rect[class="c-database"], rect[class="c-cloud"], rect[class="c-security"], rect[class="c-messagebus"], rect[class="c-external"]):not([style]) { stroke-width: 1.25; rx: 3px; }

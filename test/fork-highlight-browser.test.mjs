@@ -85,7 +85,7 @@ test('fork highlight states use the signal light, the ink ring and four opacity 
     assert.deepEqual(tag, { text: 'Downstream · 5', above: true, centered: true });
     assert.equal(await style(card('lb'), 'outline-style'), 'solid');
     assert.equal(await style(node('auth'), 'opacity'), '0.2', 'a click neighbour outside the reach still fades');
-    assert.equal(await style(edge('lb', 'api'), 'stroke-width'), '2.25px', 'a reached line gains 1');
+    assert.equal(await style(edge('lb', 'api'), 'stroke-width'), '2px', 'a reached line gains 1');
     const exported = await run(`(async () => {
       const original = URL.createObjectURL; let blob;
       URL.createObjectURL = function (value) { if (value.type.startsWith('image/svg+xml')) blob = value; return original.call(URL, value); };
@@ -112,7 +112,7 @@ test('fork highlight states use the signal light, the ink ring and four opacity 
     const lights = await run(`[...new Set([...document.querySelectorAll('.intent-trace-flow')].map(l => getComputedStyle(l).stroke))]`);
     assert.deepEqual(lights, [rgb(await token('--signal-head'))], 'in, out and loop lights share the signal colour');
     assert.match(await style(node('api'), 'filter'), /drop-shadow/, 'the traced node glows');
-    assert.equal(await style(edge('lb', 'api'), 'stroke-width'), '2.25px');
+    assert.equal(await style(edge('lb', 'api'), 'stroke-width'), '2px');
     await run(`Archify.intentTrace.clear(); Archify.focus.set('api')`);
     assert.equal(await style(card('api'), 'outline-style'), 'solid');
     assert.equal(await style(node('api'), 'filter'), 'none', 'a selected node is ringed, not lit');
@@ -125,7 +125,7 @@ test('fork highlight states use the signal light, the ink ring and four opacity 
     await load(fork);
     await run(`Archify.intentTrace.show('api')`);
     assert.deepEqual(await run(`[...new Set([...document.querySelectorAll('.intent-trace-flow')].map(l => getComputedStyle(l).display))]`), ['none']);
-    assert.equal(await style(edge('lb', 'api'), 'stroke-width'), '2.25px');
+    assert.equal(await style(edge('lb', 'api'), 'stroke-width'), '2px');
   });
 
   await t.test('classic keeps upstream highlights: no discs, tags, rings or reverse marks', async () => {

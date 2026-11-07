@@ -16,8 +16,10 @@ const repoRoot = fileURLToPath(new URL('..', import.meta.url));
 const cli = path.join(repoRoot, 'archify/bin/archify.mjs');
 const classic = { ...process.env, ARCHIFY_FORK_STYLE: 'classic' };
 const example = (name) => JSON.parse(fs.readFileSync(path.join(repoRoot, 'archify/examples', name), 'utf8'));
-// the fixed chevron tip reaches 0.85 past the line end and fork.css draws card borders 1.25 wide
-const TIP_TRIM = 0.85 + 1.25 / 2;
+// the chevron shows 1.4x its 10x7 box: its tip reaches 0.85 box units past the line end, and fork.css draws card borders 1.25 wide
+const ARROW_SCALE = 1.4;
+const TIP_TRIM = 0.85 * ARROW_SCALE + 1.25 / 2;
+const HEAD_DEPTH = 3.42 * ARROW_SCALE;
 const lineEnd = (tag, attr) => tag.match(new RegExp(` ${attr}="[^"]* L ([\\d.]+) ([\\d.]+)"`)).slice(1).map(Number);
 const near = (point, expected) => point.every((value, index) => Math.abs(value - expected[index]) < 0.01);
 
@@ -87,7 +89,7 @@ test('a loop-back channel runs mid-way under the nodes with its label on the lin
   assert.equal(Number(labelY) - 3, channelY);
   const [endX, endY] = points.at(-1);
   assert.ok(near(lineEnd(tag, 'd'), [endX, endY + TIP_TRIM]), 'the drawn line ends where the arrowhead tip meets the border');
-  assert.ok(near(lineEnd(tag, 'data-motion-path'), [endX, endY + TIP_TRIM + 3.42]), 'the comet lands where the arrowhead begins');
+  assert.ok(near(lineEnd(tag, 'data-motion-path'), [endX, endY + TIP_TRIM + HEAD_DEPTH]), 'the comet lands where the arrowhead begins');
 });
 
 test('a group frame keeps the same room around its nodes on every side', () => {
@@ -164,7 +166,7 @@ test('other diagram types end lines where the arrowhead tip meets the card borde
   // the cdn card's left border sits at x 250
   const fork = edge();
   assert.ok(near(lineEnd(fork, 'd'), [250 - TIP_TRIM, 330]), fork);
-  assert.ok(near(lineEnd(fork, 'data-motion-path'), [250 - TIP_TRIM - 3.42, 330]), fork);
+  assert.ok(near(lineEnd(fork, 'data-motion-path'), [250 - TIP_TRIM - HEAD_DEPTH, 330]), fork);
   const upstream = edge(classic);
   assert.match(upstream, / d="M 160 330 L 250 330"/);
   assert.doesNotMatch(upstream, /data-motion-path/);
@@ -174,10 +176,10 @@ test('sequence message labels sit clear of the arrowhead wing under them', () =>
   const source = example('async-job-roundtrip.sequence.json');
   const gaps = (env) => [...render(source, env, 'sequence').matchAll(/ d="M [\d.]+ ([\d.]+) L [\d.]+ \1"[^>]*\/>\s*<g data-detail="context">\s*<rect [^>]*y="([\d.]+)" width="[\d.]+" height="([\d.]+)"/g)]
     .map(([, line, top, height]) => Number(line) - Number(top) - Number(height));
-  // the chevron wing reaches 3.42 above the line
+  // the chevron wing reaches 3.42 box units above the line
   const fork = gaps();
   assert.ok(fork.length >= 8, `found ${fork.length} labelled messages`);
-  assert.ok(fork.every((gap) => gap >= 3.92), fork.join(','));
+  assert.ok(fork.every((gap) => gap >= 3.42 * ARROW_SCALE + 0.5), fork.join(','));
   assert.ok(gaps(classic).every((gap) => gap === 2));
 });
 
@@ -191,6 +193,7 @@ test('arrowheads are open chevrons of one fixed size inside the shared 10x7 mark
   }
   // every diagram type gets the same arrowhead size, whatever the line width
   assert.equal(definitions.match(/<marker [^>]*markerUnits="userSpaceOnUse"/g).length, 4);
+  assert.equal(definitions.match(/<marker [^>]*markerWidth="14" markerHeight="9.8" viewBox="0 0 10 7"/g).length, 4);
 });
 
 test('the viewer template keeps the frameless mode, safe back link, relay hold and comet wrap', () => {
