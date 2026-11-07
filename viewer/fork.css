@@ -151,6 +151,9 @@ html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg[
 
 /* edge labels sit in a borderless mask capsule; rx 8 = half the 16-high label (rx alone would turn a long box into an ellipse); sequence message names stay unboxed */
 html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg [data-edge-from] > rect.c-mask { fill: var(--mask); stroke: none; rx: 8px; }
+/* dataflow cuts its flow lines under each label instead, so the plate stays see-through and stage borders run under the text; the map zoom hides labels, so it drops the cut */
+html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg:has(mask#fork-label-cut) [data-edge-from] > rect.c-mask { fill: transparent; }
+html[data-fork-style] .diagram-container[data-detail-level="map"] svg [mask*="fork-label-cut"] { mask: none; }
 
 /* legend: 3-radius swatches with the card border, neutral count chips */
 html[data-fork-style][data-preset="classic"][data-theme] .diagram-container svg [data-legend] :is([data-legend-kind], [data-legend-semantic-kind]) > :is(rect[class="c-frontend"], rect[class="c-backend"], rect[class="c-database"], rect[class="c-cloud"], rect[class="c-security"], rect[class="c-messagebus"], rect[class="c-external"]):not([style]) { stroke-width: 1.25; rx: 3px; }

@@ -237,6 +237,29 @@ test('a dataflow label second line shows whenever its label does; classic hides 
   assert.match(line(classic), /data-detail="fine"/);
 });
 
+test('dataflow labels cut only the flow lines under them, so stage borders run through; classic keeps the plate', () => {
+  const source = {
+    schema_version: 1, diagram_type: 'dataflow',
+    meta: { title: 'Fork label cut', output: 'diagram.html' },
+    stages: [{ label: 'In' }, { label: 'Out' }],
+    nodes: [
+      { id: 'a', type: 'backend', label: 'A', stage: 0, row: 0 },
+      { id: 'b', type: 'database', label: 'B', stage: 1, row: 0 },
+    ],
+    flows: [{ id: 'ab', from: 'a', to: 'b', label: 'a long flow label' }],
+  };
+  const html = render(source, process.env, 'dataflow');
+  const plate = html.match(/data-edge-id="ab">\s*<rect x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"/).slice(1).join(',');
+  const cut = html.match(/<mask id="fork-label-cut"[^>]*>([\s\S]*?)<\/mask>/)[1];
+  const holes = [...cut.matchAll(/<rect x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"[^>]*fill="#000"/g)].map((hole) => hole.slice(1).join(','));
+  assert.deepEqual(holes, [plate]);
+  assert.match(html, /<path [^>]*data-edge-id="ab"[^>]* mask="url\(#fork-label-cut\)"/);
+  const template = fs.readFileSync(path.join(repoRoot, 'archify/assets/template.html'), 'utf8');
+  assert.match(template, /svg:has\(mask#fork-label-cut\) \[data-edge-from\] > rect\.c-mask \{ fill: transparent; \}/);
+  const upstream = render(source, classic, 'dataflow');
+  assert.doesNotMatch(upstream, /fork-label-cut/);
+});
+
 test('the viewer template keeps the frameless mode, safe back link, relay hold and comet wrap', () => {
   const html = fs.readFileSync(path.join(repoRoot, 'archify/assets/template.html'), 'utf8');
   // ?frameless=1 drops the frame and load zoom, and only then honours a safe back link

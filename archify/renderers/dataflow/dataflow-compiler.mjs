@@ -1475,10 +1475,11 @@ export function compileDataflow({ dataflow, sourceEvidence, qualityProfile: requ
       const routed = pathFor(flow);
       const strokeWidth = flowStrokeWidth(flow);
       const automatic = resolvedCrossoverFlows.has(flow);
-      const edge = `        <path ${focusEdgeAttrs(flow.from, flow.to, flow.label, index, flow.id)} data-composition-points="${routePointsValue(routed.points)}"${automatic ? ' data-composition-crossover="halo"' : ''}${authoredStraightRouteAttrs(flow, routed.points)} d="${routed.d}" class="${cls}"${animateAttr(dataflow.meta, 'edge', index)} stroke-width="${strokeWidth}" marker-end="url(#${marker})"/>`;
+      const cut = isClassicStyle() ? '' : ' mask="url(#fork-label-cut)"';
+      const edge = `        <path ${focusEdgeAttrs(flow.from, flow.to, flow.label, index, flow.id)} data-composition-points="${routePointsValue(routed.points)}"${automatic ? ' data-composition-crossover="halo"' : ''}${authoredStraightRouteAttrs(flow, routed.points)} d="${routed.d}" class="${cls}"${animateAttr(dataflow.meta, 'edge', index)} stroke-width="${strokeWidth}" marker-end="url(#${marker})"${cut}/>`;
       if (!automatic) return edge;
       return `        <g data-graph-role="automatic-crossover" style="--step:${index}">
-          <path data-graph-role="automatic-crossover-underlay" d="${routed.d}" fill="none" stroke="var(--mask)" stroke-width="${strokeWidth + 4}" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>
+          <path data-graph-role="automatic-crossover-underlay" d="${routed.d}" fill="none" stroke="var(--mask)" stroke-width="${strokeWidth + 4}" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"${cut}/>
 ${edge}
         </g>`;
     }
@@ -1499,6 +1500,16 @@ ${edge}
           <rect x="${lx - labelW / 2}" y="${ly - 11}" width="${labelW}" height="${labelH}" rx="4" class="c-mask"/>
           <text x="${lx}" y="${ly}" class="${edgeLabelAccent(flow.variant)}" font-size="8" text-anchor="middle">${text}</text>${classification}
         </g>`;
+    }
+
+    // fork: label plates are see-through, so this cut hides only the flow lines under them and stage borders stay whole
+    function renderLabelCut() {
+      const holes = asArray(dataflow.flows).map((flow) => {
+        const [lx, ly] = resolvedLabelPoints.get(flow) || labelPoint(flow, pathFor(flow).points);
+        const { width: labelW, height: labelH } = resolvedLabelRects.find(rect => rect.relation === flow) || flowLabelSize(flow);
+        return `<rect x="${lx - labelW / 2}" y="${ly - 11}" width="${labelW}" height="${labelH}" rx="4" fill="#000"/>`;
+      });
+      return `\n        <defs><mask id="fork-label-cut" maskUnits="userSpaceOnUse" x="0" y="0" width="${viewBox[0]}" height="${viewBox[1]}"><rect width="${viewBox[0]}" height="${viewBox[1]}" fill="#fff"/>${holes.join('')}</mask></defs>`;
     }
 
     const LEGEND_CATALOG = [
@@ -1559,7 +1570,7 @@ ${edge}
       const readerFit = dataflow.meta?.viewBox ? '' : ' data-reader-fit="intrinsic-height"';
       return `      <svg viewBox="0 0 ${viewBox[0]} ${viewBox[1]}"${readerFit} ${svgRootAttrs(dataflow.meta)} data-motion-choreography="stream">
 ${svgAccessibleText(dataflow.meta, 'dataflow')}
-${renderDefinitions()}
+${renderDefinitions()}${isClassicStyle() ? '' : renderLabelCut()}
 
         <!-- Background Grid -->
         <rect width="100%" height="100%" fill="url(#grid)" />
