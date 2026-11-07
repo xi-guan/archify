@@ -1475,11 +1475,10 @@ export function compileDataflow({ dataflow, sourceEvidence, qualityProfile: requ
       const routed = pathFor(flow);
       const strokeWidth = flowStrokeWidth(flow);
       const automatic = resolvedCrossoverFlows.has(flow);
-      const cut = isClassicStyle() ? '' : ' mask="url(#fork-label-cut)"';
-      const edge = `        <path ${focusEdgeAttrs(flow.from, flow.to, flow.label, index, flow.id)} data-composition-points="${routePointsValue(routed.points)}"${automatic ? ' data-composition-crossover="halo"' : ''}${authoredStraightRouteAttrs(flow, routed.points)} d="${routed.d}" class="${cls}"${animateAttr(dataflow.meta, 'edge', index)} stroke-width="${strokeWidth}" marker-end="url(#${marker})"${cut}/>`;
+      const edge = `        <path ${focusEdgeAttrs(flow.from, flow.to, flow.label, index, flow.id)} data-composition-points="${routePointsValue(routed.points)}"${automatic ? ' data-composition-crossover="halo"' : ''}${authoredStraightRouteAttrs(flow, routed.points)} d="${routed.d}" class="${cls}"${animateAttr(dataflow.meta, 'edge', index)} stroke-width="${strokeWidth}" marker-end="url(#${marker})"/>`;
       if (!automatic) return edge;
       return `        <g data-graph-role="automatic-crossover" style="--step:${index}">
-          <path data-graph-role="automatic-crossover-underlay" d="${routed.d}" fill="none" stroke="var(--mask)" stroke-width="${strokeWidth + 4}" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"${cut}/>
+          <path data-graph-role="automatic-crossover-underlay" d="${routed.d}" fill="none" stroke="var(--mask)" stroke-width="${strokeWidth + 4}" stroke-linecap="round" stroke-linejoin="round" pointer-events="none"/>
 ${edge}
         </g>`;
     }
@@ -1568,6 +1567,8 @@ ${edge}
       // ratio, so without intrinsic-height the desktop Reader can neither narrow
       // nor scroll it and every default dataflow fails the browser gate.
       const readerFit = dataflow.meta?.viewBox ? '' : ' data-reader-fit="intrinsic-height"';
+      // fork: one mask on the group, since a mask per line re-rasterizes the canvas for every moving light each frame
+      const flowPaths = asArray(dataflow.flows).map(renderFlowPath).join('\n');
       return `      <svg viewBox="0 0 ${viewBox[0]} ${viewBox[1]}"${readerFit} ${svgRootAttrs(dataflow.meta)} data-motion-choreography="stream">
 ${svgAccessibleText(dataflow.meta, 'dataflow')}
 ${renderDefinitions()}${isClassicStyle() ? '' : renderLabelCut()}
@@ -1579,7 +1580,7 @@ ${renderDefinitions()}${isClassicStyle() ? '' : renderLabelCut()}
 ${dataflow.stages.map(renderStage).join('\n\n')}
 
         <!-- Flow paths -->
-${asArray(dataflow.flows).map(renderFlowPath).join('\n')}
+${isClassicStyle() ? flowPaths : `        <g mask="url(#fork-label-cut)">\n${flowPaths}\n        </g>`}
 
         <!-- Nodes -->
 ${[...nodes.values()].map(renderNode).join('\n\n')}

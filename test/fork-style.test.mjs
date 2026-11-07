@@ -253,7 +253,9 @@ test('dataflow labels cut only the flow lines under them, so stage borders run t
   const cut = html.match(/<mask id="fork-label-cut"[^>]*>([\s\S]*?)<\/mask>/)[1];
   const holes = [...cut.matchAll(/<rect x="([\d.]+)" y="([\d.]+)" width="([\d.]+)" height="([\d.]+)"[^>]*fill="#000"/g)].map((hole) => hole.slice(1).join(','));
   assert.deepEqual(holes, [plate]);
-  assert.match(html, /<path [^>]*data-edge-id="ab"[^>]* mask="url\(#fork-label-cut\)"/);
+  // one mask on the group: a mask per line re-rasterized the canvas for every moving light and blanked the page on a loaded machine
+  assert.match(html, /<g mask="url\(#fork-label-cut\)">\s*<path [^>]*data-edge-id="ab"/);
+  assert.equal(html.match(/mask="url\(#fork-label-cut\)"/g).length, 1);
   const template = fs.readFileSync(path.join(repoRoot, 'archify/assets/template.html'), 'utf8');
   assert.match(template, /svg:has\(mask#fork-label-cut\) \[data-edge-from\] > rect\.c-mask \{ fill: transparent; \}/);
   const upstream = render(source, classic, 'dataflow');
