@@ -196,6 +196,31 @@ test('arrowheads are open chevrons of one fixed size inside the shared 10x7 mark
   assert.equal(definitions.match(/<marker [^>]*markerWidth="14" markerHeight="9.8" viewBox="0 0 10 7"/g).length, 4);
 });
 
+test('dataflow lines drawn differently into one node never share a trunk; classic still bundles them', () => {
+  const source = {
+    schema_version: 1, diagram_type: 'dataflow',
+    meta: { title: 'Fork trunks', output: 'diagram.html', quality_profile: 'showcase' },
+    stages: [{ label: 'In' }, { label: 'Out' }],
+    nodes: [
+      { id: 'a', type: 'backend', label: 'A', stage: 0, row: 0 },
+      { id: 'b', type: 'backend', label: 'B', stage: 0, row: 1 },
+      { id: 't', type: 'database', label: 'T', stage: 1, row: 2 },
+    ],
+    flows: [
+      { id: 'at', from: 'a', to: 't', label: 'plain' },
+      { id: 'bt', from: 'b', to: 't', label: 'secret', variant: 'security' },
+    ],
+  };
+  const trunks = (env) => {
+    const html = render(source, env, 'dataflow');
+    return ['at', 'bt'].map((id) => html.match(new RegExp(`data-edge-id="${id}" data-composition-points="[\\d.]+,[\\d.]+;([\\d.]+),`))[1]);
+  };
+  const [plain, secret] = trunks();
+  assert.notEqual(plain, secret);
+  const [classicPlain, classicSecret] = trunks(classic);
+  assert.equal(classicPlain, classicSecret);
+});
+
 test('the viewer template keeps the frameless mode, safe back link, relay hold and comet wrap', () => {
   const html = fs.readFileSync(path.join(repoRoot, 'archify/assets/template.html'), 'utf8');
   // ?frameless=1 drops the frame and load zoom, and only then honours a safe back link

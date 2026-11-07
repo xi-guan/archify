@@ -1,4 +1,4 @@
-import { esc, renderDefinitions, renderSemanticSigil, textUnits } from '../shared/utils.mjs';
+import { esc, isClassicStyle, renderDefinitions, renderSemanticSigil, textUnits } from '../shared/utils.mjs';
 import { animateAttr, focusEdgeAttrs, focusNodeAttrs, svgAccessibleText, svgRootAttrs } from '../shared/cli.mjs';
 import { throwDiagnosticProblems, withIsolatedDiagnosticRecording, rendererFailure } from '../shared/diagnostics.mjs';
 import { resolveLegend, renderLegend as renderResolvedLegend, legendFootprint } from '../shared/legend.mjs';
@@ -483,6 +483,7 @@ export function compileDataflow({ dataflow, sourceEvidence, qualityProfile: requ
         diagramType: 'dataflow',
         relationCollection: 'flows',
         profile: dataflow.meta?.quality_profile,
+        includeSharedEndpoints: (left, right) => !sameStroke(left, right),
         crossingResolved: (left, right) => resolvedCrossoverFlows.has(left) && resolvedCrossoverFlows.has(right),
         routeHint: 'adjust route/via or channelX/channelY so the flows use separate stage corridors'
       }));
@@ -493,6 +494,7 @@ export function compileDataflow({ dataflow, sourceEvidence, qualityProfile: requ
         diagramType: 'dataflow',
         relationCollection: 'flows',
         profile: dataflow.meta?.quality_profile,
+        includeSharedEndpoints: (left, right) => !sameStroke(left, right),
         routeHint: 'adjust route/via or channelX/channelY so unrelated flows do not visually merge'
       }));
       problems.push(...cleanBorderRunProblems({
@@ -719,7 +721,11 @@ export function compileDataflow({ dataflow, sourceEvidence, qualityProfile: requ
     const resolvedCrossoverFlows = new Set();
     const routable = asArray(dataflow.flows).filter(flow => nodes.has(flow.from) && nodes.has(flow.to));
     const segmentsOf = points => points.slice(1).map((end, index) => ({ start: points[index], end }));
-    const related = (left, right) => [left.from, left.to].some(id => id === right.from || id === right.to);
+    // fork: a bundled trunk draws one flow over the other, so only identical strokes may share one
+    const sameStroke = (left, right) => isClassicStyle() || ((left.variant || 'default') === (right.variant || 'default')
+      && flowStrokeWidth(left) === flowStrokeWidth(right));
+    const related = (left, right) => sameStroke(left, right)
+      && [left.from, left.to].some(id => id === right.from || id === right.to);
     const crosses = (left, right) => segmentsOf(pathFor(left).points).some(a => segmentsOf(pathFor(right).points).some(b => (
       properSegmentIntersection(a.start, a.end, b.start, b.end))));
     const unrelated = flow => routable.filter(other => other !== flow && !related(flow, other));
@@ -739,6 +745,7 @@ export function compileDataflow({ dataflow, sourceEvidence, qualityProfile: requ
           : [pathFor(other).points];
         return occupied.some(otherPoints => collectAmbiguousCorridors({
           routedRelations: [{ relation: flow, points }, { relation: other, points: otherPoints }],
+          includeSharedEndpoints: (left, right) => !sameStroke(left, right),
         }).length > 0);
       });
     }
