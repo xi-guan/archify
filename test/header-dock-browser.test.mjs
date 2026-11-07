@@ -61,6 +61,8 @@ test('the reader dock joins a roomy title row and falls back to the stage rail',
       window.dockErrors = [];
       addEventListener('error', e => dockErrors.push(e.message));
       addEventListener('unhandledrejection', e => dockErrors.push(String(e.reason)));
+      // notes beside the drawing keep a short window's page wide, and the short-window check needs it narrowed
+      try { localStorage.setItem('archify-rail-placement', 'bottom'); } catch (_) {}
     ` });
     const settle = () => run('document.fonts.ready.then(() => Archify.layoutStability.whenStable())');
     const viewport = (width, height) => send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1, mobile: false });

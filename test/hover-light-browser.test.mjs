@@ -104,6 +104,8 @@ test('hover lights stay one light on their own line and pass behind its label', 
     return result.result?.value;
   }
   await send('Page.addScriptToEvaluateOnNewDocument', { source: probe });
+  // notes beside the drawing shrink it to about its viewBox, and this fixture must stay scaled
+  await send('Page.addScriptToEvaluateOnNewDocument', { source: `try { localStorage.setItem('archify-rail-placement', 'bottom'); } catch (_) {}` });
   async function load(theme = 'dark') {
     await send('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 0, y: 0 });
     await send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false });
