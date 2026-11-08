@@ -53,7 +53,9 @@ test('workflow default labels and lane headings remain readable without recolori
           await Promise.all(panel.getAnimations({ subtree: true }).map(animation => animation.finished.catch(() => {})));
           const rgba = value => {
             const parts = value.match(/[\\d.]+/g).map(Number);
-            return [...parts.slice(0, 3), parts[3] ?? 1];
+            // fork: color-mix fills compute to color(srgb r g b / a) with 0-1 channels
+            const scale = value.startsWith('color(') ? 255 : 1;
+            return [...parts.slice(0, 3).map(c => c * scale), parts[3] ?? 1];
           };
           const luminance = rgb => rgb.slice(0, 3).map(c => {
             c /= 255;
@@ -163,7 +165,9 @@ test('workflow default labels and lane headings remain readable without recolori
       assert.equal(observed.lanes[2].exceptionClass, 't-security');
       // Titles retain semantic ink while restrained frame borders may blend it.
       assert.equal(observed.lanes[2].fill, observed.securityInk, 'EX heading retains security ink');
-      assert.notEqual(observed.lanes[2].exceptionStroke, 'none', 'EX frame retains a visible border');
+      // fork: the exception lane drops its inner frame for a tint (test/line-weight.test.mjs), so the tint marks it
+      assert.equal(observed.lanes[2].exceptionStroke, 'none');
+      assert.notDeepEqual(observed.lanes[2].flatBackground, observed.lanes[0].flatBackground, 'EX lane keeps a distinct tint');
       assert.equal(observed.lanes[0].fill, observed.lanes[1].fill, 'default and explicit normal headings share their ink');
       for (const lane of observed.lanes.slice(0, 2)) {
         t.diagnostic(`${theme} ${lane.label}: flat ${lane.flatRatio.toFixed(6)}:1, CSS dot peak ${lane.dotPeakRatio.toFixed(6)}:1; fill ${lane.fill}; flat background ${lane.flatBackground}; dot peak background ${lane.dotPeakBackground}`);

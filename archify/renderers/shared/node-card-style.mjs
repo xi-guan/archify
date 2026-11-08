@@ -22,8 +22,8 @@ ${TONES.map((tone) => `          ${dark} ${node}.c-${tone} { fill: color-mix(in 
           ${all} .c-security-group { stroke: color-mix(in srgb, var(--security-stroke) 58%, var(--lane-stroke)); }
           ${solid} .c-security-group { stroke-dasharray: 4 3; }
           ${solid} .c-lane { stroke: var(--lane-stroke); stroke-dasharray: none; }
-          ${all} .c-lane[data-composition-frame-kind="lane"] { rx: 3px; stroke: none; fill: color-mix(in srgb, var(--text) 3%, transparent); }
-          ${all} .c-lane[data-composition-frame-kind="lane"]:is(${[1, 3, 5, 7, 9].map((d) => `[data-composition-frame-id$="${d}"]`).join(', ')}) { fill: color-mix(in srgb, var(--text) 6%, transparent); }
+          ${all} .c-lane[data-composition-frame-kind="lane"] { rx: 3px; stroke: none; fill: color-mix(in srgb, var(--text) 3%, var(--lane-fill)); }
+          ${all} .c-lane[data-composition-frame-kind="lane"]:is(${[1, 3, 5, 7, 9].map((d) => `[data-composition-frame-id$="${d}"]`).join(', ')}) { fill: color-mix(in srgb, var(--text) 6%, var(--lane-fill)); }
           ${all} .c-lane[data-composition-frame-kind="lane"]:has(+ [data-composition-frame-kind="exception-lane"]) { fill: color-mix(in srgb, var(--security-stroke) 9%, transparent); }
           ${all} [data-composition-frame-kind="exception-lane"] { fill: none; stroke: none; }
           ${all} ${frameLabel} { rx: 5px; fill: color-mix(in srgb, var(--cloud-stroke) 10%, var(--mask)); stroke: color-mix(in srgb, var(--cloud-stroke) 38%, var(--mask)); stroke-width: .8px; }
