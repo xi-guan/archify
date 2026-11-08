@@ -722,8 +722,12 @@ export function compileDataflow({ dataflow, sourceEvidence, qualityProfile: requ
     const routable = asArray(dataflow.flows).filter(flow => nodes.has(flow.from) && nodes.has(flow.to));
     const segmentsOf = points => points.slice(1).map((end, index) => ({ start: points[index], end }));
     // fork: a bundled trunk draws one flow over the other, so only identical strokes may share one
-    const sameStroke = (left, right) => isClassicStyle() || ((left.variant || 'default') === (right.variant || 'default')
-      && flowStrokeWidth(left) === flowStrokeWidth(right));
+    const sameStroke = (left, right) => isClassicStyle() || authoredCorridor(left) || authoredCorridor(right)
+      || ((left.variant || 'default') === (right.variant || 'default') && flowStrokeWidth(left) === flowStrokeWidth(right));
+    // fork: an authored route keeps the trunk its author chose, as upstream does
+    function authoredCorridor(flow) {
+      return Boolean(flow.via || (flow.route && flow.route !== 'auto') || flow.channelX !== undefined || flow.channelY !== undefined);
+    }
     const related = (left, right) => sameStroke(left, right)
       && [left.from, left.to].some(id => id === right.from || id === right.to);
     const crosses = (left, right) => segmentsOf(pathFor(left).points).some(a => segmentsOf(pathFor(right).points).some(b => (

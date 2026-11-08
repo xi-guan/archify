@@ -221,6 +221,10 @@ test('dataflow lines drawn differently into one node never share a trunk; classi
   assert.equal(classicPlain, classicSecret);
 });
 
+test('dataflow examples whose authored routes join unlike lines on one trunk still render', () => {
+  for (const name of ['product-analytics.dataflow.json', 'event-stream.dataflow.json']) render(example(name), process.env, 'dataflow');
+});
+
 test('a dataflow label second line shows whenever its label does; classic hides it until full zoom', () => {
   const source = {
     schema_version: 1, diagram_type: 'dataflow',
